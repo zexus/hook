@@ -21,8 +21,7 @@
 #if ENABLE_DEBUG
 #define  LOG_TAG "INJECT"
 #define  LOGD(fmt, args...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, fmt, ##args)
-#define DEBUG_PRINT(format,args...) \
-    LOGD(format, ##args)
+#define DEBUG_PRINT(format,args...) LOGD(format, ##args)
 #else
 #define DEBUG_PRINT(format,args...)
 #endif
@@ -62,6 +61,13 @@ int ptrace_readdata(pid_t pid,  uint8_t *src, uint8_t *buf, size_t size)
     return 0;
 }
 
+/*
+ *@function write size of data into pid's dest address
+ *@param pid:  taget pid of process
+ *@param dest: destination address
+ *@param data: start address of data
+ *@param size: size of data
+ */
 int ptrace_writedata(pid_t pid, uint8_t *dest, uint8_t *data, size_t size)
 {
     uint32_t i, j, remain;
@@ -72,21 +78,21 @@ int ptrace_writedata(pid_t pid, uint8_t *dest, uint8_t *data, size_t size)
         char chars[sizeof(long)];
     } d;
 
-    j = size / 4;
+    j = size / 4;       // 4 bytes
     remain = size % 4;
 
     laddr = data;
 
     for (i = 0; i < j; i ++) {
         memcpy(d.chars, laddr, 4);
-        ptrace(PTRACE_POKETEXT, pid, dest, d.val);
+        ptrace(PTRACE_POKETEXT, pid, dest, d.val);  // write
 
         dest  += 4;
         laddr += 4;
     }
 
     if (remain > 0) {
-        d.val = ptrace(PTRACE_PEEKTEXT, pid, dest, 0);
+        d.val = ptrace(PTRACE_PEEKTEXT, pid, dest, 0);  // read
         for (i = 0; i < remain; i ++) {
             d.chars[i] = *laddr ++;
         }
@@ -137,8 +143,8 @@ int ptrace_call(pid_t pid, uint32_t addr, long *params, uint32_t num_params, str
     }
 
     int stat = 0;
-    waitpid(pid, &stat, WUNTRACED);
-    while (stat != 0xb7f) {
+    waitpid(pid, &stat, WUNTRACED); // return after suspend status
+    while (stat != 0xb7f) {         // 0xb: SIGSEGV 0x7f: suspend status
         if (ptrace_continue(pid) == -1) {
             printf("error\n");
             return -1;
@@ -477,7 +483,7 @@ int main(int argc, char** argv) {
         printf("Can't find the process\n");
         return -1;
     }
-    //target_pid = find_pid_of("/data/test");
+
     inject_remote_process(target_pid, "/data/libhello.so", "hook_entry",  "I'm parameter!", strlen("I'm parameter!"));
     return 0;
 }
