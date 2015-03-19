@@ -241,7 +241,7 @@ void* get_module_base(pid_t pid, const char* module_name)
     
     if (pid < 0) {    
         /* self process */    
-        snprintf(filename, sizeof(filename), "/proc/self/maps", pid);    
+        snprintf(filename, sizeof(filename), "/proc/self/maps");
     } else {    
         snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);    
     }    
