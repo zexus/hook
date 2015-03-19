@@ -421,7 +421,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     if (ptrace_call_wrapper(target_pid, "mmap", mmap_addr, parameters, 6, &regs) == -1)
         goto exit;
 
-    map_base = ptrace_retval(&regs);
+    map_base = ptrace_retval(&regs);    // memory-malloc base address
 
     dlopen_addr = get_remote_addr( target_pid, linker_path, (void *)dlopen );
     dlsym_addr = get_remote_addr( target_pid, linker_path, (void *)dlsym );
@@ -431,12 +431,13 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     DEBUG_PRINT("[+] Get imports: dlopen: %x, dlsym: %x, dlclose: %x, dlerror: %x\n",
             dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr);
 
-    printf("library path = %s\n", library_path);
+    printf("memory malloc base address = %x\n", map_base);
     ptrace_writedata(target_pid, map_base, library_path, strlen(library_path) + 1);
 
     parameters[0] = map_base;
-    parameters[1] = RTLD_NOW| RTLD_GLOBAL;
+    parameters[1] = RTLD_NOW | RTLD_GLOBAL;
 
+    // (void *)dlopen(map_base, RTLD_NOW | RTLD_GLOBAL);
     if (ptrace_call_wrapper(target_pid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
         goto exit;
 
@@ -447,6 +448,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     parameters[0] = sohandle;
     parameters[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
 
+    // (void *)dlsym(handle, "hook_entry")
     if (ptrace_call_wrapper(target_pid, "dlsym", dlsym_addr, parameters, 2, &regs) == -1)
         goto exit;
 
@@ -457,6 +459,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, param, strlen(param) + 1);
     parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
+    // hook_entry("I'm parameter!");
     if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 1, &regs) == -1)
         goto exit;
 
