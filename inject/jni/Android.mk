@@ -4,6 +4,10 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := inject
 LOCAL_SRC_FILES := inject.c
 
+# For Android L
+LOCAL_CFLAGS += -pie -fPIE
+LOCAL_LDFLAGS += -pie -fPIE
+
 #shellcode.s
 
 LOCAL_LDLIBS += -L$(SYSROOT)/usr/lib -llog
