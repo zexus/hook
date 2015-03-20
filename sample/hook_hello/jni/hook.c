@@ -75,13 +75,29 @@ int hook_eglSwapBuffers()
     Elf32_Ehdr ehdr;
     read(fd, &ehdr, sizeof(Elf32_Ehdr));
 
-    unsigned long shdr_addr = ehdr.e_shoff;
-    int shnum = ehdr.e_shnum;
-    int shent_size = ehdr.e_shentsize;
-    unsigned long stridx = ehdr.e_shstrndx;
-  
-    Elf32_Shdr shdr;
-    lseek(fd, shdr_addr + stridx * shent_size, SEEK_SET);
+    unsigned long shdr_addr = ehdr.e_shoff; // 节区头部表格相对文件开头的偏移量
+    int shnum = ehdr.e_shnum;               // 表格中的条目数目
+    int shent_size = ehdr.e_shentsize;      // 每个项目的字节数
+    unsigned long stridx = ehdr.e_shstrndx; // 节区头部表格与节区名称字符串表相关的表项的索引
+
+    /*
+     *节区头部数据结构描述
+     *
+     *typedef struct {
+     *   Elf32_Word sh_name;                // 节区名称
+     *   Elf32_Word sh_type;                // 节区类型
+     *   Elf32_Word sh_flags;               // 标志描述属性
+     *   Elf32_Word sh_addr;                // 节区出现在内存映像中时给出节区第一个字节应处的位置
+     *   Elf32_Word sh_offset;              // 节区第一字节与文件头之间的偏移
+     *   Elf32_Word sh_size;                // 节区的长度
+     *   Elf32_Word sh_link;                // 节区头部索引链接
+     *   Elf32_Word sh_info;                // 附加信息
+     *   Elf32_Word sh_addralign;           // 某些节区带有地址对齐约束
+     *   Elf32_Word sh_entsize;             // 某些节区中包含固定大小的项目，如符号表
+     *}Elf32_Shdr
+    */
+    Elf32_Shdr shdr;                        // 节区头部
+    lseek(fd, shdr_addr + stridx * shent_size, SEEK_SET);   // 文件头 + stridx * shent_size
     read(fd, &shdr, shent_size);
 
     char * string_table = (char *)malloc(shdr.sh_size);
