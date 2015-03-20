@@ -481,12 +481,19 @@ exit:
 
 int main(int argc, char** argv) {
     pid_t target_pid;
+    int nRet = -1;
+
     target_pid = find_pid_of("/system/bin/surfaceflinger");
     if (-1 == target_pid) {
-        printf("Can't find the process\n");
+        DEBUG_PRINT("Can't find the process\n");
         return -1;
     }
 
-    inject_remote_process(target_pid, "/data/libhello.so", "hook_entry",  "I'm parameter!", strlen("I'm parameter!"));
+    nRet = inject_remote_process(target_pid, "/data/libhello.so", "hook_entry",  "I'm parameter!", strlen("I'm parameter!"));
+    if (0 != nRet) {
+        DEBUG_PRINT("Inject %d process error\n");
+        return -1;
+    }
+
     return 0;
 }
