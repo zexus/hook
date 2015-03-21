@@ -8,17 +8,23 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-#define LOG_TAG "DEBUG"
-#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
+#define ENABLE_DEBUG 1
+
+#if ENABLE_DEBUG
+#define LOG_TAG "HOOK"
+#define LOGD(fmt, args...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, fmt, ##args)
 #define DEBUG_PRINT(format,args...) LOGD(format, ##args)
+#else
+#define DEBUG_PRINT(format,args...)
+#endif
 
 EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surf) = -1;
 
 EGLBoolean new_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 {
-    LOGD("New eglSwapBuffers\n");
+    DEBUG_PRINT("New eglSwapBuffers\n");
     if (old_eglSwapBuffers == -1)
-        LOGD("error\n");
+        DEBUG_PRINT("error\n");
     return old_eglSwapBuffers(dpy, surface);
 }
 
@@ -60,20 +66,20 @@ void* get_module_base(pid_t pid, const char* module_name)
 
 int hook_eglSwapBuffers(char * pcTargetLib)
 {
-    old_eglSwapBuffers = eglSwapBuffers;
-    LOGD("Orig eglSwapBuffers = %p\n", old_eglSwapBuffers);
+    int nRet = -1;
+    int nFd = -1;
+
+    nFd = open(pcTargetLib, O_RDONLY);
+    if (-1 == nFd) {
+        DEBUG_PRINT("[+] Open taget library error\n");
+        goto exit;
+    }
+
     void * base_addr = get_module_base(getpid(), pcTargetLib);
     DEBUG_PRINT("[+] Target Library address = %p\n", base_addr);
 
-    int fd;
-    fd = open(pcTargetLib, O_RDONLY);
-    if (-1 == fd) {
-        LOGD("error\n");
-        return -1;
-    }
-
     Elf32_Ehdr ehdr;
-    read(fd, &ehdr, sizeof(Elf32_Ehdr));
+    read(nFd, &ehdr, sizeof(Elf32_Ehdr));
 
     unsigned long shdr_addr = ehdr.e_shoff; // 节区头部表格相对文件开头的偏移量
     int shnum = ehdr.e_shnum;               // 表格中的条目数目
@@ -96,14 +102,15 @@ int hook_eglSwapBuffers(char * pcTargetLib)
      *   Elf32_Word sh_entsize;             // 某些节区中包含固定大小的项目，如符号表
      *}Elf32_Shdr
     */
+
     Elf32_Shdr shdr;                        // 节区头部
-    lseek(fd, shdr_addr + stridx * shent_size, SEEK_SET);   // 文件头 + stridx * shent_size
-    read(fd, &shdr, shent_size);
+    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);   // 文件头 + stridx * shent_size
+    read(nFd, &shdr, shent_size);
 
     char * string_table = (char *)malloc(shdr.sh_size);
-    lseek(fd, shdr.sh_offset, SEEK_SET);
-    read(fd, string_table, shdr.sh_size);
-    lseek(fd, shdr_addr, SEEK_SET);
+    lseek(nFd, shdr.sh_offset, SEEK_SET);
+    read(nFd, string_table, shdr.sh_size);
+    lseek(nFd, shdr_addr, SEEK_SET);
 
     int i;
     uint32_t out_addr = 0;
@@ -112,19 +119,19 @@ int hook_eglSwapBuffers(char * pcTargetLib)
     int32_t got_found = 0;
 
     for (i = 0; i < shnum; i++) {
-        read(fd, &shdr, shent_size);
+        read(nFd, &shdr, shent_size);
         if (shdr.sh_type == SHT_PROGBITS) {
             int name_idx = shdr.sh_name;
             if (strcmp(&(string_table[name_idx]), ".got.plt") == 0
                     || strcmp(&(string_table[name_idx]), ".got") == 0) {
                 out_addr = base_addr + shdr.sh_addr;
                 out_size = shdr.sh_size;
-                LOGD("out_addr = %lx, out_size = %lx\n", out_addr, out_size);
+                DEBUG_PRINT("[+] out_addr = %lx, out_size = %lx\n", out_addr, out_size);
 
                 for (i = 0; i < out_size; i += 4) {
                     got_item = *(uint32_t *)(out_addr + i);
                     if (got_item  == old_eglSwapBuffers) {
-                        LOGD("Found eglSwapBuffers in got\n");
+                        DEBUG_PRINT("[+] Found eglSwapBuffers in got\n");
                         got_found = 1;
 
                         uint32_t page_size = getpagesize();
@@ -134,7 +141,7 @@ int hook_eglSwapBuffers(char * pcTargetLib)
 
                         break;
                     } else if (got_item == new_eglSwapBuffers) {
-                        LOGD("Already hooked\n");
+                        DEBUG_PRINT("Already hooked\n");
                         break;
                     }
                 }
@@ -144,13 +151,23 @@ int hook_eglSwapBuffers(char * pcTargetLib)
         }
     }
 
-    free(string_table);
-    close(fd);
+    return nRet;
+
+exit:
+    if (string_table) {
+        free(string_table);
+    }
+
+    if (nFd > 0) {
+        close(nFd);
+    }
+
+    return nRet;
 }
 
 int hook_entry(char * pcTargetLib){
-    LOGD("Hook success\n");
-    LOGD("Start hooking\n");
+    DEBUG_PRINT("[+] Start hooking %s\n", pcTargetLib);
+    old_eglSwapBuffers = eglSwapBuffers;
     hook_eglSwapBuffers(pcTargetLib);
     return 0;
 }
