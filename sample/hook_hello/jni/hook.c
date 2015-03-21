@@ -10,6 +10,7 @@
 
 #define LOG_TAG "DEBUG"
 #define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
+#define DEBUG_PRINT(format,args...) LOGD(format, ##args)
 
 EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surf) = -1;
 
@@ -57,16 +58,15 @@ void* get_module_base(pid_t pid, const char* module_name)
     return (void *)addr;
 }
 
-#define LIBSF_PATH  "/system/lib/libsurfaceflinger.so"
-int hook_eglSwapBuffers()
+int hook_eglSwapBuffers(char * pcTargetLib)
 {
     old_eglSwapBuffers = eglSwapBuffers;
     LOGD("Orig eglSwapBuffers = %p\n", old_eglSwapBuffers);
-    void * base_addr = get_module_base(getpid(), LIBSF_PATH);
-    LOGD("libsurfaceflinger.so address = %p\n", base_addr);
+    void * base_addr = get_module_base(getpid(), pcTargetLib);
+    DEBUG_PRINT("[+] Target Library address = %p\n", base_addr);
 
     int fd;
-    fd = open(LIBSF_PATH, O_RDONLY);
+    fd = open(pcTargetLib, O_RDONLY);
     if (-1 == fd) {
         LOGD("error\n");
         return -1;
@@ -148,9 +148,9 @@ int hook_eglSwapBuffers()
     close(fd);
 }
 
-int hook_entry(char * a){
+int hook_entry(char * pcTargetLib){
     LOGD("Hook success\n");
     LOGD("Start hooking\n");
-    hook_eglSwapBuffers();
+    hook_eglSwapBuffers(pcTargetLib);
     return 0;
 }

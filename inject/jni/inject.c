@@ -490,7 +490,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    nRet = inject_remote_process(target_pid, libhook_path, "hook_entry",  "I'm parameter!", strlen("I'm parameter!"));
+    nRet = inject_remote_process(target_pid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
     if (0 != nRet) {
         DEBUG_PRINT("Inject %d process error\n");
         return -1;
