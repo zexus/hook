@@ -81,9 +81,9 @@ int hook_eglSwapBuffers(char * pcTargetLib)
     Elf32_Ehdr ehdr;
     read(nFd, &ehdr, sizeof(Elf32_Ehdr));
 
-    unsigned long shdr_addr = ehdr.e_shoff; // 节区头部表格相对文件开头的偏移量
-    int shnum = ehdr.e_shnum;               // 表格中的条目数目
-    int shent_size = ehdr.e_shentsize;      // 每个项目的字节数
+    unsigned long shdr_addr = ehdr.e_shoff; // 节区头部表格相对文件开头的偏移量（按字节计算）
+    int shnum = ehdr.e_shnum;               // 节区头部表格的表项数目
+    int shent_size = ehdr.e_shentsize;      // 节区头部表格的表项大小
     unsigned long stridx = ehdr.e_shstrndx; // 节区头部表格与节区名称字符串表相关的表项的索引
 
     /*
@@ -104,7 +104,7 @@ int hook_eglSwapBuffers(char * pcTargetLib)
     */
 
     Elf32_Shdr shdr;                        // 节区头部
-    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);   // 文件头 + stridx * shent_size
+    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);   // 节区头部表格起始地址 + stridx * shent_size
     read(nFd, &shdr, shent_size);
 
     char * string_table = (char *)malloc(shdr.sh_size);
@@ -136,7 +136,7 @@ int hook_eglSwapBuffers(char * pcTargetLib)
 
                         uint32_t page_size = getpagesize();
                         uint32_t entry_page_start = (out_addr + i) & (~(page_size - 1));
-                        mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);
+                        mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);  // 设置内存访问权限
                         *(uint32_t *)(out_addr + i) = new_eglSwapBuffers;
 
                         break;
