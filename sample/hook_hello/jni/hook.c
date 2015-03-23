@@ -104,7 +104,7 @@ int hook_eglSwapBuffers(char * pcTargetLib)
     */
 
     Elf32_Shdr shdr;                        // 节区头部
-    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);   // 节区头部表格起始地址 + stridx * shent_size
+    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);   // 节区头部表格起始地址 + stridx * shent_size = .shstrtab（包含各节区名称）
     read(nFd, &shdr, shent_size);
 
     char * string_table = (char *)malloc(shdr.sh_size);
@@ -120,21 +120,20 @@ int hook_eglSwapBuffers(char * pcTargetLib)
 
     for (i = 0; i < shnum; i++) {
         read(nFd, &shdr, shent_size);
-        if (shdr.sh_type == SHT_PROGBITS) {
+        if (shdr.sh_type == SHT_PROGBITS) { // SHT_PROGBITS：表明此节区包含程序定义的信息，其格式和含义都由程序解析
             int name_idx = shdr.sh_name;
-            if (strcmp(&(string_table[name_idx]), ".got.plt") == 0
-                    || strcmp(&(string_table[name_idx]), ".got") == 0) {
+            if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0) {
                 out_addr = base_addr + shdr.sh_addr;
                 out_size = shdr.sh_size;
-                DEBUG_PRINT("[+] out_addr = %lx, out_size = %lx\n", out_addr, out_size);
+                DEBUG_PRINT("[+] Got section start_addr = %lx, section_size = %lx\n", out_addr, out_size);
 
                 for (i = 0; i < out_size; i += 4) {
                     got_item = *(uint32_t *)(out_addr + i);
                     if (got_item  == old_eglSwapBuffers) {
-                        DEBUG_PRINT("[+] Found eglSwapBuffers in got\n");
+                        DEBUG_PRINT("[+] Found eglSwapBuffers in got section\n");
                         got_found = 1;
 
-                        uint32_t page_size = getpagesize();
+                        uint32_t page_size = getpagesize();                                         // 获取分页大小
                         uint32_t entry_page_start = (out_addr + i) & (~(page_size - 1));
                         mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);  // 设置内存访问权限
                         *(uint32_t *)(out_addr + i) = new_eglSwapBuffers;
