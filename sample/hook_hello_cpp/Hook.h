@@ -1,0 +1,1 @@
+extern "C" int hook_entry(char *pcTargetLib);
