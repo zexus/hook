@@ -32,6 +32,8 @@ const char *libc_path = "/system/lib/libc.so";
 const char *linker_path = "/system/bin/linker";
 const char *libhook_path = "/system/lib/libhook.so";
 
+extern int hook_entry(char *pcTargetLib);
+
 int ptrace_readdata(pid_t pid,  uint8_t *src, uint8_t *buf, size_t size)
 {
     uint32_t i, j, remain;
