@@ -1,3 +1,21 @@
+/************************************************************************
+xxx
+All rights reserved.
+
+File Name:
+Summary:
+Current Version:
+Author:
+
+History:
+Ver 1.0.0, Zexus, 2015.03.24
+Add “switch windows” function for recording
+
+Ver 0.0.0, xx, 2015.03.24
+Original version
+
+**************************************************************************/
+
 #include <stdio.h>    
 #include <stdlib.h>    
 #include <stdbool.h>
@@ -138,6 +156,12 @@ int test(pid_t pid) {
 	return 0;
 }
 
+/**
+ @brief 动态库注入主函数
+ @param[in] 指定将要注入的进程pid，如：<processname> -n <pid>
+ @return 成功注入返回0, 失败返回－1
+ @note 后续将主函数入口添加参数，以动态库形式供其它程序调用
+**/
 int main(int argc, char** argv) {
 	pid_t target_pid = -1;
 	const char* pName = NULL;
