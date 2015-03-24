@@ -41,10 +41,10 @@ Original version
 
 #if defined(LINUX)
 
-/*__attribute__((weak)) void *dlopen (__const uint8_t*, int);
- __attribute__((weak)) void *dlsym (void *__restrict , __const uint8_t*__restrict);
- __attribute__((weak)) int dlclose (void *);
- __attribute__((weak)) uint8_t*dlerror (void);*/
+//__attribute__((weak)) void *dlopen (__const uint8_t*, int);
+//__attribute__((weak)) void *dlsym (void *__restrict , __const uint8_t*__restrict);
+//__attribute__((weak)) int dlclose (void *);
+//__attribute__((weak)) uint8_t*dlerror (void);
 
 #endif    
 
@@ -163,7 +163,7 @@ int test(pid_t pid) {
  @note 后续将主函数入口添加参数，以动态库形式供其它程序调用
 **/
 int main(int argc, char** argv) {
-	pid_t target_pid = -1;
+	pid_t nTargetPid = -1;
 	const char* pName = NULL;
 	const char* libPath = NULL;
 	const char* funcName = NULL;
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
 		return usage();
 
 	if (argv[1][0] == '-' && argv[1][1] == 'n') {
-		target_pid = strtol(argv[2], &end, 10);
+		nTargetPid = strtol(argv[2], &end, 10);
 		if (strlen(end) > 0) {
 			fprintf(stderr, "invalid pid %s\n", argv[2]);
 			return EINVAL;
@@ -192,23 +192,22 @@ int main(int argc, char** argv) {
 		pName = argv[index++];
 	}
 
-	if (target_pid < 0) {
-		target_pid = find_pid_of(pName);
-		if (-1 == target_pid) {
+	if (nTargetPid < 0) {
+		nTargetPid = find_pid_of(pName);
+		if (-1 == nTargetPid) {
 			ALOGE("Can't find the process %s\n", pName);
 			return -1;
 		}
 	}
 
-	/*if (is_injected(target_pid, libPath)) {
-		ALOGD("Process(%d) already injected %s !", target_pid, libPath);
+	/*if (is_injected(nTargetPid, libPath)) {
+		ALOGD("Process(%d) already injected %s !", nTargetPid, libPath);
 		return 0;
 	}*/
 
 	// slibpath = libPath;
 
-	test(target_pid);
+	test(nTargetPid);
+
 	return 0;
-
-
 }

@@ -1,3 +1,21 @@
+/************************************************************************
+xxx
+All rights reserved.
+
+File Name:
+Summary:
+Current Version:
+Author:
+
+History:
+Ver 1.0.0, Zexus, 2015.03.24
+Add “switch windows” function for recording
+
+Ver 0.0.0, xx, 2015.03.24
+Original version
+
+**************************************************************************/
+
 #ifndef ELF_UTIL_H_
 #define ELF_UTIL_H_
 
