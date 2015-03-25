@@ -53,12 +53,16 @@ static long sOffset = 0;
 static void* requestMemoryForPassParam(pid_t pid, int len);
 static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_params);
 
-int ptrace_attach(pid_t pid){
-	if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) != 0)
-		return errno;
+int ptrace_attach(pid_t nTargetPid) {
+	int nRet = 0;
+	int nStatus = 0;
 
-	int status = 0;
-	waitpid(pid, &status, WUNTRACED);
+	nRet = ptrace(PTRACE_ATTACH, nTargetPid, NULL, NULL);
+	if (0 != nRet) {
+		return errno;
+	}
+
+	waitpid(nTargetPid, &nStatus, WUNTRACED);
 	return 0;
 }
 
