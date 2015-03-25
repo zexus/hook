@@ -178,7 +178,7 @@ int HookTest(pid_t nTargetPid) {
 		param[0].size = strlen((char*) param[0].value) + 1;
 		*/
 
-		nRet = ptrace_call(nTargetPid, value, param, 2, NULL);
+		nRet = ptrace_call(nTargetPid, value, param, sizeof(param)/sizeof(param[0]), NULL);
 
 		printf("Press enter to dlclose and detach\n");
 		getchar();
