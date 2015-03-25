@@ -85,37 +85,41 @@ static int usage() {
 	return EINVAL;
 }
 
-int HookTest(pid_t pid) {
-	int ret = 0;
+int HookTest(pid_t nTargetPid) {
+	int nRet = 0;
 
-	if (pid > 0) {
-		if ((ret = ptrace_attach(pid)) != 0) {
-			printf("attach %d failed %d %s\n", pid, ret, strerror(ret));
-			return -1;
-		}
+	if (nTargetPid < 0) {
+		printf("Invalid process pid: %d\n", nTargetPid);
+		return -1;
+	}
+
+	nRet = ptrace_attach(nTargetPid);
+	if (0 != nRet) {
+		printf("attach %d failed %d %s\n", nTargetPid, nRet, strerror(nRet));
+		return -1;
 	}
 
 	unsigned long addr, value;
 	const char* tofind = "Hook_Entry";
 
-	ret = find_func_by_got(pid, tofind, &addr, &value);
+	nRet = find_func_by_got(nTargetPid, tofind, &addr, &value);
 
 	ALOGI("%s found by got addr: 0x%lx entry: 0x%lx\n", tofind, value, addr);
 
 #if !defined(ANDROID)
 	struct link_map* plm;
 	value = 0;
-	get_linkmap(pid, &value);
+	get_linkmap(nTargetPid, &value);
 	plm = (struct link_map*)value;
 
-	ret = find_func_by_links(pid, plm, tofind, NULL, &value);
+	nRet = find_func_by_links(nTargetPid, plm, tofind, NULL, &value);
 	ALOGI("find_func_by_links: %s found at 0x%lx\n", tofind, value);
 #endif
 
-	if (ret == 0) {
+	if (nRet == 0) {
 
 		struct pt_regs regs, tempRegs;
-		ptrace_get_regs(pid, &regs);
+		ptrace_get_regs(nTargetPid, &regs);
 
 		call_param_t param[2];
 
@@ -137,19 +141,19 @@ int HookTest(pid_t pid) {
 		param[0].size = strlen((char*) param[0].value) + 1;
 */
 
-		ret = ptrace_call(pid, value,param, 2, NULL);
+		nRet = ptrace_call(nTargetPid, value,param, 2, NULL);
 
 
-		ALOGI("ptrace_call ret %d\n", ret);
+		ALOGI("ptrace_call ret %d\n", nRet);
 
-		ptrace_set_regs(pid, &regs);
+		ptrace_set_regs(nTargetPid, &regs);
 
 	}
 	else
-		ALOGE("function %s not found %d\n", tofind, ret);
+		ALOGE("function %s not found %d\n", tofind, nRet);
 
-	if (pid > 0)
-		ptrace_detach(pid);
+	if (nTargetPid > 0)
+		ptrace_detach(nTargetPid);
 
 	return 0;
 }
@@ -198,10 +202,10 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	/*if (is_injected(nTargetPid, libPath)) {
-		ALOGD("Process(%d) already injected %s !", nTargetPid, libPath);
-		return 0;
-	}*/
+	// if (is_injected(nTargetPid, libPath)) {
+	// 	ALOGD("Process(%d) already injected %s !", nTargetPid, libPath);
+	// 	return 0;
+	// }
 
 	// slibpath = libPath;
 
