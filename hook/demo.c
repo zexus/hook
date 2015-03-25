@@ -96,7 +96,7 @@ int HookTest(pid_t pid) {
 	}
 
 	unsigned long addr, value;
-	const char* tofind = "eglSwapBuffers";
+	const char* tofind = "Hook_Entry";
 
 	ret = find_func_by_got(pid, tofind, &addr, &value);
 
