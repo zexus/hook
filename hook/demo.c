@@ -8,10 +8,10 @@ Current Version:
 Author:
 
 History:
-Ver 1.0.0, Zexus, 2015.03.24
+Ver 1.0.0, xxx, 2015.03.24
 Add “switch windows” function for recording
 
-Ver 0.0.0, xx, 2015.03.24
+Ver 0.0.0, xxx, 2015.03.24
 Original version
 
 **************************************************************************/
@@ -96,7 +96,7 @@ int HookTest(pid_t pid) {
 	}
 
 	unsigned long addr, value;
-	const char* tofind = "tangqie";
+	const char* tofind = "eglSwapBuffers";
 
 	ret = find_func_by_got(pid, tofind, &addr, &value);
 

@@ -9,7 +9,7 @@ Author:
 
 History:
 Ver 1.0.0, Zexus, 2015.03.24
-Add Òswitch windowsÓ function for recording
+Add â€œswitch windowsâ€ function for recording
 
 Ver 0.0.0, xx, 2015.03.24
 Original version
@@ -508,7 +508,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	volatile ElfW(Ehdr) *pEhdr = NULL, ehdr;
 	volatile ElfW(Phdr) *pPhdr = NULL, phdr;
 	volatile ElfW(Dyn)  *pDyn = NULL, dyn;
-    char* image_base = NULL;
+	char* image_base = NULL;
 #if defined(ANDROID)
 	volatile ElfW(Rel) *pRel = NULL, rel;
 #else
@@ -527,7 +527,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	// ehdr->phdr->dynamic->rela->sym: name@symbol and vaddr@offset
 	// rela has the name index in sym and the vaddr of the .got.plt entry
 
-    image_base = (char*)image_start_addr(pid);
+	image_base = (char*)image_start_addr(pid);
 
 
 	pEhdr = (ElfW(Ehdr)*)image_base;
@@ -754,7 +754,7 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
     }
 
 	if (pid <= 0)
-		snprintf(path, sizeof(path), "/proc/self/maps", pid);
+		snprintf(path, sizeof(path), "/proc/self/maps");
 	else
 		snprintf(path, sizeof(path), "/proc/%d/maps", pid);
 
