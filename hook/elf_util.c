@@ -535,18 +535,21 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	pEhdr = (ElfW(Ehdr)*)image_base;
 
 	/**
-	Program Header
-
-	typedef struct {
-		Elf32_Word p_type;
-		Elf32_Off  p_offset;
-		Elf32_Addr p_vaddr;
-		Elf32_Addr p_paddr;
-		Elf32_Word p_filesz;
-		Elf32_Word p_memsz;
-		Elf32_Word p_flags;
-		Elf32_Word p_align;
-	} Elf32_phdr;
+	-------------------------------------------------------------------------
+	Program Header				Section Header
+	typedef struct {			typedef struct {
+		Elf32_Word p_type;			Elf32_Word sh_name;
+		Elf32_Off  p_offset;			Elf32_Word sh_type;
+		Elf32_Addr p_vaddr;			Elf32_Word sh_flags;
+		Elf32_Addr p_paddr;			Elf32_Addr sh_addr;
+		Elf32_Word p_filesz;			Elf32_Off  sh_offset;
+		Elf32_Word p_memsz;			Elf32_Word sh_size;
+		Elf32_Word p_flags;			Elf32_Word sh_link;
+		Elf32_Word p_align;			Elf32_Word sh_info;
+	} Elf32_phdr;					Elf32_Word sh_addralign;
+							Elf32_Word sh_entsize;
+						}Elf32_Shdr;
+	-------------------------------------------------------------------------
 	**/
 
 	// ELF Header Data

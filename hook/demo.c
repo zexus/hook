@@ -80,7 +80,7 @@ static bool is_injected(pid_t pid, const char* module_name) {
 	return ret;
 }
 
-static int usage() {
+static int Hookusage() {
 	fprintf(stderr, "Usage: hook pname | -n pid\n");
 	return EINVAL;
 }
@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
 	long parameters[5];
 
 	if (argc < 2)
-		return usage();
+		return Hookusage();
 
 	if (argv[1][0] == '-' && argv[1][1] == 'n') {
 		nTargetPid = strtol(argv[2], &end, 10);
