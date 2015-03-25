@@ -15,7 +15,6 @@ Ver 0.0.0, xx, 2015.03.24
 Original version
 
 **************************************************************************/
-
 #include <stdio.h>    
 #include <stdlib.h>    
 #include <stdbool.h>
@@ -53,7 +52,6 @@ Original version
 
 #define CPSR_T_MASK     ( 1u << 5 )    
 
-
 // TODO these paths are from /proc
 // linker can be got from .interp and libc from .dynamic
 
@@ -87,7 +85,7 @@ static int usage() {
 	return EINVAL;
 }
 
-int test(pid_t pid) {
+int HookTest(pid_t pid) {
 	int ret = 0;
 
 	if (pid > 0) {
@@ -207,7 +205,7 @@ int main(int argc, char** argv) {
 
 	// slibpath = libPath;
 
-	test(nTargetPid);
+	HookTest(nTargetPid);
 
 	return 0;
 }
