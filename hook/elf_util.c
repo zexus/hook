@@ -505,15 +505,17 @@ error:
 // if (not lazy bind || already referenced)
 int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, unsigned long* entry_value) {
 	volatile int ret = -1;
-	volatile ElfW(Ehdr) *pEhdr = NULL, ehdr;
-	volatile ElfW(Phdr) *pPhdr = NULL, phdr;
+	volatile ElfW(Ehdr) *pEhdr = NULL, ehdr;	// ELF Header
+	volatile ElfW(Phdr) *pPhdr = NULL, phdr;	// Program Header
 	volatile ElfW(Dyn)  *pDyn = NULL, dyn;
 	char* image_base = NULL;
-#if defined(ANDROID)
+
+	#if defined(ANDROID)
 	volatile ElfW(Rel) *pRel = NULL, rel;
-#else
+	#else
 	ElfW(REL_TYPE) *pRel = NULL, rel;
-#endif
+	#endif
+
 	volatile ElfW(Sym) *pSym = NULL, sym;
 	char*	pStrTable;
 
@@ -532,6 +534,22 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 
 	pEhdr = (ElfW(Ehdr)*)image_base;
 
+	/**
+	Program Header
+
+	typedef struct {
+		Elf32_Word p_type;
+		Elf32_Off  p_offset;
+		Elf32_Addr p_vaddr;
+		Elf32_Addr p_paddr;
+		Elf32_Word p_filesz;
+		Elf32_Word p_memsz;
+		Elf32_Word p_flags;
+		Elf32_Word p_align;
+	} Elf32_phdr;
+	**/
+
+	// ELF Header Data
 	if ((ret = read_data(pid, pEhdr, &ehdr, sizeof(ehdr))) != 0) {
 		ALOGE("%s: read ehdr failed\n", __FUNCTION__);
 		return ret;
@@ -548,11 +566,11 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 		}
 
 		if (phdr.p_type == PT_DYNAMIC) {
-#if defined(ANDROID)
+		#if defined(ANDROID)
 			pDyn = (ElfW(Dyn)*) (image_base + phdr.p_vaddr);
-#else
+		#else
 			pDyn = (ElfW(Dyn)*) (phdr.p_vaddr);
-#endif
+		#endif
 			break;
 		}
 	}
@@ -571,12 +589,11 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 		default:
 			break;
 		case DT_JMPREL:  // address of PLT
-#if defined(ANDROID)
+		#if defined(ANDROID)
 			pRel = (ElfW(Rel)*)(image_base + dyn.d_un.d_ptr);
-#else
+		#else
 			pRel = (ElfW(REL_TYPE)*)dyn.d_un.d_ptr;
-#endif
-
+		#endif
 			break;
 		case DT_PLTRELSZ:
 			totalRelaSize = dyn.d_un.d_val;
@@ -585,18 +602,18 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 			relaEnt = dyn.d_un.d_val;
 			break;*/
 		case DT_SYMTAB: // address of symbol table
-#if defined(ANDROID)
+		#if defined(ANDROID)
 			pSym = (ElfW(Sym)*)(image_base + dyn.d_un.d_ptr);
-#else
+		#else
 			pSym = (ElfW(Sym)*)dyn.d_un.d_ptr;
-#endif
+		#endif
 			break;
 		case DT_STRTAB: // address of string table
-#if defined(ANDROID)
+		#if defined(ANDROID)
 			pStrTable = (char*)(image_base + dyn.d_un.d_ptr);
-#else
+		#else
 			pStrTable = (char*)dyn.d_un.d_ptr;
-#endif
+		#endif
 			break;
 
 		}
@@ -629,11 +646,12 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 		}
 
 		// read a symbol in sym table
-#if defined(ANDROID)
+		#if defined(ANDROID)
 		ret = read_data(pid, pSym + ELF32_R_SYM(rel.r_info),&sym, sizeof(sym));
-#else
+		#else
 		ret = read_data(pid, pSym + ELFW_R(SYM)(rel.r_info),&sym, sizeof(sym));
-#endif
+		#endif
+
 		if (ret != 0) {
 			ALOGE("%s read rel entry %d failed\n", __FUNCTION__, i);
 			return ret;
@@ -653,11 +671,11 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 					free(pBuf);
 					ret = 0;
 					if (entry_addr != NULL)
-#if defined (ANDROID)
+					#if defined (ANDROID)
 						*entry_addr = image_base + rel.r_offset;
-#else
+					#else
 						*entry_addr = rel.r_offset;
-#endif
+					#endif
 					if (entry_value != NULL)
 						ret = read_data(pid, (void*)(*entry_addr), entry_value, sizeof(long));
 					return ret;
