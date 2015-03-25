@@ -121,7 +121,7 @@ int HookTest(pid_t nTargetPid) {
 		struct pt_regs regs, tempRegs;
 		ptrace_get_regs(nTargetPid, &regs);
 
-		call_param_t param[2];
+		call_param_t param[6];
 
 		param[0].value = 0;
 
