@@ -138,7 +138,7 @@ int HookTest(pid_t nTargetPid) {
 		#endif
 
 		param[1].type = CALL_PARAM_TYPE_CONSTANT;
-		
+
 		param[2].value = 2;
 
 		#ifndef PARAM_ONLY_BY_STACK
@@ -146,7 +146,7 @@ int HookTest(pid_t nTargetPid) {
 		#endif
 
 		param[2].type = CALL_PARAM_TYPE_CONSTANT;
-		
+
 		param[3].value = 3;
 
 		#ifndef PARAM_ONLY_BY_STACK
@@ -154,7 +154,7 @@ int HookTest(pid_t nTargetPid) {
 		#endif
 
 		param[3].type = CALL_PARAM_TYPE_CONSTANT;
-		
+
 		param[4].value = 4;
 
 		#ifndef PARAM_ONLY_BY_STACK
@@ -162,7 +162,7 @@ int HookTest(pid_t nTargetPid) {
 		#endif
 
 		param[4].type = CALL_PARAM_TYPE_CONSTANT;
-		
+
 		param[5].value = 5;
 
 		#ifndef PARAM_ONLY_BY_STACK
