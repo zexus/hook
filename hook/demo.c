@@ -123,7 +123,7 @@ int HookTest(pid_t nTargetPid) {
 
 		call_param_t param[2];
 
-		param[0].value = 3;
+		param[0].value = 0;
 
 		#ifndef PARAM_ONLY_BY_STACK
 		param[0].index = 0;
@@ -131,13 +131,45 @@ int HookTest(pid_t nTargetPid) {
 
 		param[0].type = CALL_PARAM_TYPE_CONSTANT;
 
-		param[1].value = 4;
+		param[1].value = 1;
 
 		#ifndef PARAM_ONLY_BY_STACK
 		param[1].index = 1;
 		#endif
 
 		param[1].type = CALL_PARAM_TYPE_CONSTANT;
+		
+		param[2].value = 2;
+
+		#ifndef PARAM_ONLY_BY_STACK
+		param[2].index = 2;
+		#endif
+
+		param[2].type = CALL_PARAM_TYPE_CONSTANT;
+		
+		param[3].value = 3;
+
+		#ifndef PARAM_ONLY_BY_STACK
+		param[3].index = 3;
+		#endif
+
+		param[3].type = CALL_PARAM_TYPE_CONSTANT;
+		
+		param[4].value = 4;
+
+		#ifndef PARAM_ONLY_BY_STACK
+		param[4].index = 4;
+		#endif
+
+		param[4].type = CALL_PARAM_TYPE_CONSTANT;
+		
+		param[5].value = 5;
+
+		#ifndef PARAM_ONLY_BY_STACK
+		param[5].index = 5;
+		#endif
+
+		param[5].type = CALL_PARAM_TYPE_CONSTANT;
 
 		/*
 		param[0].value = (long) "I'm hooked!!!";

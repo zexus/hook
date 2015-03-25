@@ -3,7 +3,7 @@
 int main()
 {
     while (1) {
-        Hook_Entry(9, 9);
+        Hook_Entry(9, 9, 9, 9, 9, 9);
         sleep(3);
     }
 

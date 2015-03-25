@@ -287,7 +287,6 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 	// pass parameters
 	long value;
 	int i;
-
 	struct pt_regs regs;
 
 	ptrace_pass_param(pid, params, num_params);
@@ -297,24 +296,24 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 
 	int offset = 0;
 
-#if defined (LINUX)
+	#if defined (LINUX)
 	offset = ptrace_is_remote_interrupted_in_syscall(pid) ? 2 : 0;
-#endif
+	#endif
 
 	regs.REG_IP = addr + offset;
 
-#if defined(ANDROID)
-    if (regs.ARM_pc & 1) {
-        // thumb
-        regs.ARM_pc &= (~1u);
-        regs.ARM_cpsr |= CPSR_T_MASK;
-    } else {
-        // arm
-        regs.ARM_cpsr &= ~CPSR_T_MASK;
-    }
+	#if defined(ANDROID)
+	if (regs.ARM_pc & 1) {
+		// thumb
+		regs.ARM_pc &= (~1u);
+		regs.ARM_cpsr |= CPSR_T_MASK;
+	} else {
+		// arm
+		regs.ARM_cpsr &= ~CPSR_T_MASK;
+	}
 
-    regs.ARM_lr = 0;
-#endif
+	regs.ARM_lr = 0;
+	#endif
 
 	int ret = ptrace_set_regs(pid, &regs);if (ret != 0)ALOGE("error line %d\n", __LINE__);
 	ret = ptrace_continue(pid);if (ret != 0)ALOGE("error line %d\n", __LINE__);
