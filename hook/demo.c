@@ -106,7 +106,7 @@ int HookTest(pid_t nTargetPid) {
 
 	ALOGI("%s found by got addr: 0x%lx entry: 0x%lx\n", tofind, value, addr);
 
-#if !defined(ANDROID)
+	#if !defined(ANDROID)
 	struct link_map* plm;
 	value = 0;
 	get_linkmap(nTargetPid, &value);
@@ -114,7 +114,7 @@ int HookTest(pid_t nTargetPid) {
 
 	nRet = find_func_by_links(nTargetPid, plm, tofind, NULL, &value);
 	ALOGI("find_func_by_links: %s found at 0x%lx\n", tofind, value);
-#endif
+	#endif
 
 	if (nRet == 0) {
 
@@ -124,30 +124,35 @@ int HookTest(pid_t nTargetPid) {
 		call_param_t param[2];
 
 		param[0].value = 3;
-#ifndef PARAM_ONLY_BY_STACK
+
+		#ifndef PARAM_ONLY_BY_STACK
 		param[0].index = 0;
-#endif
+		#endif
+
 		param[0].type = CALL_PARAM_TYPE_CONSTANT;
 
 		param[1].value = 4;
-#ifndef PARAM_ONLY_BY_STACK
+
+		#ifndef PARAM_ONLY_BY_STACK
 		param[1].index = 1;
-#endif
+		#endif
+
 		param[1].type = CALL_PARAM_TYPE_CONSTANT;
-/*
+
+		/*
 		param[0].value = (long) "I'm hooked!!!";
 		param[0].index = 0;
 		param[0].type = CALL_PARAM_TYPE_POINTER;
 		param[0].size = strlen((char*) param[0].value) + 1;
-*/
+		*/
 
-		nRet = ptrace_call(nTargetPid, value,param, 2, NULL);
+		nRet = ptrace_call(nTargetPid, value, param, 2, NULL);
 
-
+		printf("Press enter to dlclose and detach\n");
+		getchar();
 		ALOGI("ptrace_call ret %d\n", nRet);
 
 		ptrace_set_regs(nTargetPid, &regs);
-
 	}
 	else
 		ALOGE("function %s not found %d\n", tofind, nRet);
