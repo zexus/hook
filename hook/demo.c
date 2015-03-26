@@ -87,6 +87,7 @@ static int Hookusage() {
 
 int HookTest(pid_t nTargetPid) {
 	int nRet = 0;
+	int i = 0;
 
 	if (nTargetPid < 0) {
 		printf("Invalid process pid: %d\n", nTargetPid);
@@ -122,54 +123,13 @@ int HookTest(pid_t nTargetPid) {
 		ptrace_get_regs(nTargetPid, &regs);
 
 		call_param_t param[6];
-
-		param[0].value = 0;
-
-		#ifndef PARAM_ONLY_BY_STACK
-		param[0].index = 0;
-		#endif
-
-		param[0].type = CALL_PARAM_TYPE_CONSTANT;
-
-		param[1].value = 1;
-
-		#ifndef PARAM_ONLY_BY_STACK
-		param[1].index = 1;
-		#endif
-
-		param[1].type = CALL_PARAM_TYPE_CONSTANT;
-
-		param[2].value = 2;
-
-		#ifndef PARAM_ONLY_BY_STACK
-		param[2].index = 2;
-		#endif
-
-		param[2].type = CALL_PARAM_TYPE_CONSTANT;
-
-		param[3].value = 3;
-
-		#ifndef PARAM_ONLY_BY_STACK
-		param[3].index = 3;
-		#endif
-
-		param[3].type = CALL_PARAM_TYPE_CONSTANT;
-
-		param[4].value = 4;
-
-		#ifndef PARAM_ONLY_BY_STACK
-		param[4].index = 4;
-		#endif
-
-		param[4].type = CALL_PARAM_TYPE_CONSTANT;
-
-		param[5].value = 5;
-
-		#ifndef PARAM_ONLY_BY_STACK
-		param[5].index = 5;
-		#endif
-
-		param[5].type = CALL_PARAM_TYPE_CONSTANT;
+		for (i = 0; i < 6; i++) {
+			param[i].value = i;
+			#ifndef PARAM_ONLY_BY_STACK
+			param[i].index = i;
+			#endif
+			param[i].type = CALL_PARAM_TYPE_CONSTANT;
+		}
 
 		/*
 		param[0].value = (long) "I'm hooked!!!";
