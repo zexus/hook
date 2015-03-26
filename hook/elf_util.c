@@ -770,7 +770,7 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 
 	if (module_name == NULL) {
 		if (find_name_by_pid(pid, selfname, 1024) != 0) {
-			ALOGE("find name by pid %d failed %d\n", pid, errno);
+			ALOGI("find name by pid %d failed %d\n", pid, errno);
 			return errno;
 		}
 	}

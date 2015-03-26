@@ -328,7 +328,7 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 	ptrace_pass_param(pid, params, num_params, &value);
 
 	#if !defined(ANDROID)
-	ptrace_push(pid, 0x00, &value);
+		ptrace_push(pid, 0x00, &value);
 	#endif
 
 	ptrace_get_regs(pid, &regs);
@@ -336,22 +336,22 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 	int offset = 0;
 
 	#if defined (LINUX)
-	offset = ptrace_is_remote_interrupted_in_syscall(pid) ? 2 : 0;
+		offset = ptrace_is_remote_interrupted_in_syscall(pid) ? 2 : 0;
 	#endif
 
 	regs.REG_IP = addr + offset;
 
 	#if defined(ANDROID)
-	if (regs.ARM_pc & 1) {
-		// thumb
-		regs.ARM_pc &= (~1u);
-		regs.ARM_cpsr |= CPSR_T_MASK;
-	} else {
-		// arm
-		regs.ARM_cpsr &= ~CPSR_T_MASK;
-	}
-
-	regs.ARM_lr = 0;
+		if (regs.ARM_pc & 1) {
+			// thumb
+			regs.ARM_pc &= (~1u);
+			regs.ARM_cpsr |= CPSR_T_MASK;
+		} else {
+			// arm
+			regs.ARM_cpsr &= ~CPSR_T_MASK;
+		}
+	
+		regs.ARM_lr = 0;
 	#endif
 
 	nRet = ptrace_set_regs(pid, &regs);
