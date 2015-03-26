@@ -9,7 +9,7 @@ Author:
 
 History:
 Ver 1.0.0, Zexus, 2015.03.24
-Add �switch windows� function for recording
+Add “switch windows” function for recording
 
 Ver 0.0.0, xx, 2015.03.24
 Original version
@@ -103,6 +103,13 @@ int ptrace_set_reg(pid_t pid, int index, long value) {
 	return ptrace(PTRACE_POKEUSER, pid, index * sizeof(long), &value) != 0 ? errno : 0;
 }
 
+/**
+ @brief 获取各寄存器数值
+ @param[in] 指定进程pid
+ @param[in] 将存入数值的pt_regs结构体
+ @return 成功获取返回0, 失败返回错误代码
+ @note 获取到的数值存入pt_regs结构体
+**/
 int ptrace_get_regs(pid_t pid, struct pt_regs * regs) {
 	if (regs != NULL) {
 		return ptrace(PTRACE_GETREGS, pid, NULL, regs) != 0 ? errno : 0;
@@ -110,6 +117,13 @@ int ptrace_get_regs(pid_t pid, struct pt_regs * regs) {
 		return EINVAL;
 }
 
+/**
+ @brief 设置各寄存器数值
+ @param[in] 指定进程pid
+ @param[in] 将设置数值的pt_regs结构体
+ @return 成功获取返回0, 失败返回错误代码
+ @note 设置pt_regs结构体各数值存入各寄存器
+**/
 int ptrace_set_regs(pid_t pid, const struct pt_regs * regs) {
 	if (regs == NULL)
 		return EINVAL;
@@ -208,7 +222,7 @@ int ptrace_push_bytes(pid_t pid, const void *buf, size_t size, unsigned long* sp
 		currentSp -= len;
 		if ((ret = ptrace_set_reg(pid, REG_SP_INDEX, currentSp)) != 0)
 			return ret;
-        */
+		*/
 		if ((ret = ptrace_write_bytes(pid, (unsigned long*)currentSp, buf, len)) != 0)
 			return ret;
 
