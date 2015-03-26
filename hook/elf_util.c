@@ -249,19 +249,17 @@ static int getDynsymCount(pid_t pid, const struct link_map *plm) {
 	return 0;
 }*/
 
-
-// TODO the first LOAD segment's vaddr. see phdr
 unsigned long* image_start_addr(pid_t pid) {
 #if defined(LINUX)
-#if __WORDSIZE == 64
-	return (unsigned long*)0x0000000000400000;
-#else
-	return (unsigned long*)0x08048000;
-#endif
+	#if __WORDSIZE == 64
+		return (unsigned long*)0x0000000000400000;
+	#else
+		return (unsigned long*)0x08048000;
+	#endif
 #elif defined(ANDROID)
-    unsigned long value;
-    get_module_base(pid, NULL, &value);
-    return (unsigned long*)value;
+	unsigned long value;
+	get_module_base(pid, NULL, &value);
+	return (unsigned long*)value;
 #endif
 
 
@@ -502,7 +500,6 @@ error:
 }
 #endif
 
-// if (not lazy bind || already referenced)
 int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, unsigned long* entry_value) {
 	volatile int ret = -1;
 	volatile ElfW(Ehdr) *pEhdr = NULL, ehdr;	// ELF Header
