@@ -78,25 +78,27 @@ int ptrace_syscall(pid_t pid) {
 	return ptrace(PTRACE_SYSCALL, pid, NULL, NULL) != 0 ? errno : 0;
 }
 
-
 int ptrace_get_reg(pid_t pid, int index, long* out) {
 	errno = 0;
+
 	if (out != NULL) {
-	#if defined(ANDROID)
-        struct pt_regs regs;
-        if (ptrace(PTRACE_GETREGS, pid, NULL, &regs) != 0)
-        	return errno;
-        else {
-        	if (out != NULL)
-        		*out = regs.uregs[index];
-        	return 0;
-        }
+		#if defined(ANDROID)
+		struct pt_regs regs;
+
+		if (ptrace(PTRACE_GETREGS, pid, NULL, &regs) != 0) {
+			return errno;
+		} else {
+			if (out != NULL)
+				*out = regs.uregs[index];
+			return 0;
+		}
 		#else
 		*out = ptrace(PTRACE_PEEKUSER, pid, index * sizeof(long), out, NULL);
 		return errno;
 		#endif
-	} else
+	} else {
 		return EINVAL;
+	}
 }
 
 int ptrace_set_reg(pid_t pid, int index, long value) {
