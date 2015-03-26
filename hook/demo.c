@@ -112,14 +112,13 @@ int HookTest(pid_t nTargetPid) {
 	value = 0;
 	get_linkmap(nTargetPid, &value);
 	plm = (struct link_map*)value;
-
 	nRet = find_func_by_links(nTargetPid, plm, tofind, NULL, &value);
 	ALOGI("find_func_by_links: %s found at 0x%lx\n", tofind, value);
 	#endif
 
 	if (nRet == 0) {
 
-		struct pt_regs regs, tempRegs;
+		struct pt_regs regs;
 		ptrace_get_regs(nTargetPid, &regs);
 
 		call_param_t param[6];

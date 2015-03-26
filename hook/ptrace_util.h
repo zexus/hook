@@ -102,10 +102,10 @@ Original version
 
 typedef struct {
 	int type;
-	int size;										// if type is POINTER, the bytes count of the buf pointed by the value, don't forget the ending \n of string. unused for type CONSTANT.
+	int size;	// if type is POINTER, the bytes count of the buf pointed by the value, don't forget the ending \n of string. unused for type CONSTANT.
 	long value;
 #ifndef PARAM_ONLY_BY_STACK
-	int index;										// the index of this param in function declaration, left to right, base 0.
+	int index;	// the index of this param in function declaration, left to right, base 0.
 #endif
 }call_param_t;
 

@@ -370,7 +370,6 @@ int ptrace_wait_signal(pid_t pid, int sig) {
 	return 0;
 }
 
-
 static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_params, long *sp) {
 	int ret = EINVAL;
 	int i, j;
