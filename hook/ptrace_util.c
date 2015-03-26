@@ -133,6 +133,15 @@ int ptrace_set_regs(pid_t pid, const struct pt_regs * regs) {
 		return ptrace(PTRACE_SETREGS, pid, NULL, regs) != 0 ? errno : 0;
 }
 
+/**
+ @brief 读取src起始地址的size字节数据，保存到buf
+ @param[in] pid 指定进程pid
+ @param[in] src 读取数据起始的地址
+ @param[in] buf 存入数据的起始地址
+ @param[in] size 读取数据的大小
+ @return 成功获取返回0, 失败返回错误代码
+ @note
+**/
 int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t size) {
 	int wordCount, byteRemain;
 	const unsigned long *srcAddr;
@@ -140,8 +149,9 @@ int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t siz
 	WORDUN un;
 	int i;
 
-	if (src == NULL || buf == NULL || size < 0)
+	if (pid < 0 || src == NULL || buf == NULL || size < 0) {
 		return EINVAL;
+	}
 
 	wordCount = size / sizeof(long);
 	byteRemain = size % sizeof(long);
@@ -150,6 +160,8 @@ int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t siz
 
 	for (i = 0; i < wordCount; i++, srcAddr++, dstAddr++) {
 		errno = 0;
+
+		// *(dstAddr) = ptrace(PTRACE_POKETEXT, pid, srcAddr, NULL);
 		*(dstAddr) = ptrace(PTRACE_PEEKDATA, pid, srcAddr, NULL);
 		if (errno != 0) {
 			ALOGE("PEEKDATA from addr 0x%lx failed %d %s\n", srcAddr, errno, strerror(errno));
@@ -160,11 +172,14 @@ int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t siz
 
 	if (byteRemain > 0) {
 		errno = 0;
+
+		// un.value = ptrace(PTRACE_POKETEXT, pid, dest, d.val);  // write
 		un.value = ptrace(PTRACE_PEEKDATA, pid, srcAddr, NULL);
 		if (errno != 0) {
 			ALOGE("PEEKDATA from addr 0x%lx failed %d %s\n", srcAddr, errno, strerror(errno));
 			return errno;
 		}
+
 		for (i = 0; i < byteRemain; i++)
 			((char*)dstAddr)[i] = un.chars[i];
 	}

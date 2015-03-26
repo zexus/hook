@@ -29,7 +29,6 @@ Original version
 #include "ptrace_util.h"
 // Attention: Do not dereference any remote pointer, use read functions
 
-
 #if defined(ANDROID)
 const char *LIBC_PATH = "/system/lib/libc.so";
 const char *LINKER_PATH = "/system/bin/linker";
@@ -44,32 +43,31 @@ const char *LINKER_PATH = "/lib/libdl.so.2";
 #endif
 #endif
 
-
 static int find_name_by_pid(pid_t pid, char* buf, size_t size);
 
-// read local or remote data
 static int read_data(pid_t pid, void* src, void* buf, size_t size) {
-	int ret = 0;
-	if (pid == 0)
-		memcpy(buf, src, size);
-	else
-		ret = ptrace_read_bytes(pid, src, buf, size);
+	int nRet = 0;
 
-	return ret;
+	if (pid == 0) {
+		memcpy(buf, src, size);
+	} else {
+		nRet = ptrace_read_bytes(pid, src, buf, size);
+	}
+
+	return nRet;
 }
 
-// free carefully for embedded pointer
 typedef struct {
-    const char      *pdynstr;      /* Dynamic string table */
-    ElfW(Sym)       *pdynsym;      /* Dynamic symbol table */
-    int            nbuckets;     /* # hash buckets */
-    int            symndx;       /* Index of 1st dynsym in hash */
-    unsigned int   maskwords_bm; /* # Bloom filter words, minus 1 */
-    unsigned int   shift2;       /* Bloom filter hash shift */
-    const unsigned long     *pbloom;       /* Bloom filter words */
-    const unsigned int      *pbuckets;     /* Hash buckets */
-    const unsigned int      *phashval;     /* Hash value array. this is just a remote pointer */
-    unsigned long			base;
+    const char      *pdynstr;		/* Dynamic string table */
+    ElfW(Sym)       *pdynsym;		/* Dynamic symbol table */
+    int            nbuckets;		/* # hash buckets */
+    int            symndx;		/* Index of 1st dynsym in hash */
+    unsigned int   maskwords_bm;	/* # Bloom filter words, minus 1 */
+    unsigned int   shift2;		/* Bloom filter hash shift */
+    const unsigned long     *pbloom;	/* Bloom filter words */
+    const unsigned int      *pbuckets;	/* Hash buckets */
+    const unsigned int      *phashval;	/* Hash value array. this is just a remote pointer */
+    unsigned long base;
 } hash_state_t;
 
 static void free_hash_state(hash_state_t* p) {
@@ -555,7 +553,6 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 		return ret;
 	}
 
-	// find .dynamic
 	pDyn = NULL;
 
 	for (i = 0, pPhdr = (ElfW(Phdr)*) ((char*) pEhdr + ehdr.e_phoff); i < ehdr.e_phnum; i++, pPhdr++) {
@@ -565,6 +562,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 			return ret;
 		}
 
+		// 动态链接信息段.dynamic
 		if (phdr.p_type == PT_DYNAMIC) {
 		#if defined(ANDROID)
 			pDyn = (ElfW(Dyn)*) (image_base + phdr.p_vaddr);
@@ -586,36 +584,35 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	// find dynamic sections
 	while (dyn.d_tag != DT_NULL) {
 		switch (dyn.d_tag) {
-		default:
-			break;
-		case DT_JMPREL:  // address of PLT
-		#if defined(ANDROID)
-			pRel = (ElfW(Rel)*)(image_base + dyn.d_un.d_ptr);
-		#else
-			pRel = (ElfW(REL_TYPE)*)dyn.d_un.d_ptr;
-		#endif
-			break;
-		case DT_PLTRELSZ:
-			totalRelaSize = dyn.d_un.d_val;
-			break;
-		/*case DT_RELAENT:
-			relaEnt = dyn.d_un.d_val;
-			break;*/
-		case DT_SYMTAB: // address of symbol table
-		#if defined(ANDROID)
-			pSym = (ElfW(Sym)*)(image_base + dyn.d_un.d_ptr);
-		#else
-			pSym = (ElfW(Sym)*)dyn.d_un.d_ptr;
-		#endif
-			break;
-		case DT_STRTAB: // address of string table
-		#if defined(ANDROID)
-			pStrTable = (char*)(image_base + dyn.d_un.d_ptr);
-		#else
-			pStrTable = (char*)dyn.d_un.d_ptr;
-		#endif
-			break;
-
+			default:
+				break;
+			case DT_JMPREL:		// address of PLT
+			#if defined(ANDROID)
+				pRel = (ElfW(Rel)*)(image_base + dyn.d_un.d_ptr);
+			#else
+				pRel = (ElfW(REL_TYPE)*)dyn.d_un.d_ptr;
+			#endif
+				break;
+			case DT_PLTRELSZ:	// size of PLT relocate
+				totalRelaSize = dyn.d_un.d_val;
+				break;
+			/*case DT_RELAENT:
+				relaEnt = dyn.d_un.d_val;
+				break;*/
+			case DT_SYMTAB:		// address of symbol table
+			#if defined(ANDROID)
+				pSym = (ElfW(Sym)*)(image_base + dyn.d_un.d_ptr);
+			#else
+				pSym = (ElfW(Sym)*)dyn.d_un.d_ptr;
+			#endif
+				break;
+			case DT_STRTAB:	// address of string table
+			#if defined(ANDROID)
+				pStrTable = (char*)(image_base + dyn.d_un.d_ptr);
+			#else
+				pStrTable = (char*)dyn.d_un.d_ptr;
+			#endif
+				break;
 		}
 
 		pDyn++;
