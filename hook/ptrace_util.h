@@ -32,6 +32,7 @@ Original version
 // #error "set REGs struct and names on Android"
 
 #define REG_AX_INDEX 0
+#define REG_SP_INDEX 13
 
 #define REG_SP ARM_sp
 #define REG_IP ARM_pc

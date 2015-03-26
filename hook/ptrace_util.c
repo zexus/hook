@@ -51,7 +51,7 @@ static void* sMapBase = NULL;
 static long sOffset = 0;
 
 static void* requestMemoryForPassParam(pid_t pid, int len);
-static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_params);
+static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_params, long *sp);
 
 int ptrace_attach(pid_t nTargetPid) {
 	int nRet = 0;
@@ -82,13 +82,19 @@ int ptrace_syscall(pid_t pid) {
 int ptrace_get_reg(pid_t pid, int index, long* out) {
 	errno = 0;
 	if (out != NULL) {
-#if defined(ANDROID)
+	#if defined(ANDROID)
         struct pt_regs regs;
-        return ptrace(PTRACE_GETREGS, pid, NULL, &regs) != 0 ? errno : regs.uregs[index];
-#else
+        if (ptrace(PTRACE_GETREGS, pid, NULL, &regs) != 0)
+        	return errno;
+        else {
+        	if (out != NULL)
+        		*out = regs.uregs[index];
+        	return 0;
+        }
+		#else
 		*out = ptrace(PTRACE_PEEKUSER, pid, index * sizeof(long), out, NULL);
 		return errno;
-#endif
+		#endif
 	} else
 		return EINVAL;
 }
@@ -282,15 +288,18 @@ char* ptrace_get_str(pid_t pid, const unsigned long *addr) {
 }
 
 int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int num_params, long* retVal) {
-//	int ret = -1;
+	// int ret = -1;
 	sOffset = 0;
 	// pass parameters
 	long value;
 	int i;
 	struct pt_regs regs;
 
-	ptrace_pass_param(pid, params, num_params);
-	ptrace_push(pid, 0x00, NULL);
+	ptrace_pass_param(pid, params, num_params, &value);
+
+	#if !defined(ANDROID)
+	ptrace_push(pid, 0x00, &value);
+	#endif
 
 	ptrace_get_regs(pid, &regs);
 
@@ -346,18 +355,20 @@ int ptrace_wait_signal(pid_t pid, int sig) {
 }
 
 
-static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_params) {
+static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_params, long *sp) {
 	int ret = EINVAL;
 	int i, j;
+	long value;
 
 	if (pid <= 0 || params == NULL)
 		return ret;
 
-    if (num_params <= 0)
-        return 0;
+	if (num_params <= 0)
+		return 0;
 
-#if !(defined (LINUX) && __WORDSIZE == 32)
 	call_param_t param;
+
+	#if !(defined (LINUX) && __WORDSIZE == 32)
 	struct pt_regs regs;
 	ptrace_get_regs(pid, &regs);
 
@@ -409,13 +420,14 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 		}
 	}
 
-	ret = ptrace_set_regs(pid, &regs);if (ret != 0)ALOGE("error line %d\n", __LINE__);
 
 
-	for (j = num_params - 1, param = params[j]; j >=i; --j) {
+
+	for (j = num_params - 1; j >=i; --j) {
 		// reg_index = -1;
 		long param_value = 0;
 		void* remote_addr;
+		param = params[j];
 
 		if (param.type == CALL_PARAM_TYPE_POINTER) {
 			remote_addr = requestMemoryForPassParam(pid, param.size);
@@ -436,14 +448,19 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 		ptrace_push(pid, param_value, NULL);
 	}
 
+	ret = ptrace_get_reg(pid, REG_SP_INDEX, &(regs.REG_SP));if (ret != 0)ALOGE("get sp failed %d\n", ret);
+	ret = ptrace_set_regs(pid, &regs);if (ret != 0)ALOGE("error line %d\n", __LINE__);
 
+	if (sp != NULL)
+		*sp = regs.REG_SP;
 #else
 #error "TODO"
 
-	for (i = num_params - 1, param = params[i]; i >=0; --j) {
+	for (i = num_params - 1; i >=0; --j) {
 
 		long param_value = 0;
 		void* remote_addr;
+		param = params[i];
 
 		if (param.type == CALL_PARAM_TYPE_POINTER) {
 			remote_addr = requestMemoryForPassParam(pid, param.size);
@@ -461,7 +478,7 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 			param_value = param.value;
 		}
 
-		ptrace_push(pid, param_value, NULL);
+		ptrace_push(pid, param_value, sp);
 	}
 
 #endif
