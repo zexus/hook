@@ -319,9 +319,8 @@ char* ptrace_get_str(pid_t pid, const unsigned long *addr) {
 }
 
 int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int num_params, long* retVal) {
-	// int ret = -1;
+	int nRet = -1;
 	sOffset = 0;
-	// pass parameters
 	long value;
 	int i;
 	struct pt_regs regs;
@@ -355,11 +354,22 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 	regs.ARM_lr = 0;
 	#endif
 
-	int ret = ptrace_set_regs(pid, &regs);if (ret != 0)ALOGE("error line %d\n", __LINE__);
-	ret = ptrace_continue(pid);if (ret != 0)ALOGE("error line %d\n", __LINE__);
-	ret = ptrace_wait_signal(pid, SIGSEGV);if (ret != 0)ALOGE("error line %d\n", __LINE__);
+	nRet = ptrace_set_regs(pid, &regs);
+	if (0 != nRet) {
+		ALOGE("error line %d\n", __LINE__);
+	}
 
-	if (retVal != NULL) {
+	nRet = ptrace_continue(pid);
+	if (0 != nRet) {
+		ALOGE("error line %d\n", __LINE__);
+	}
+
+	nRet = ptrace_wait_signal(pid, SIGSEGV);
+	if (0 != nRet) {
+		ALOGE("error line %d\n", __LINE__);
+	}
+
+	if (NULL != retVal) {
 		 ptrace_get_reg(pid, REG_AX_INDEX, retVal);
 	}
 
@@ -522,10 +532,10 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 	if (sMapBase == NULL) {
 		call_param_t parameters[6];
 		for (i = 0; i < 6; ++i) {
-#ifndef PARAM_ONLY_BY_STACK
-			parameters[i].index = i;
-#endif
-			parameters[i].type = CALL_PARAM_TYPE_CONSTANT;
+			#ifndef PARAM_ONLY_BY_STACK
+				parameters[i].index = i;
+			#endif
+				parameters[i].type = CALL_PARAM_TYPE_CONSTANT;
 		}
 		parameters[0].value = 0; // addr
 		parameters[1].value = 0x4000; // size

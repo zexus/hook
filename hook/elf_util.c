@@ -507,12 +507,12 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	char* image_base = NULL;
 
 	#if defined(ANDROID)
-	volatile ElfW(Rel) *pRel = NULL, rel;
+		volatile ElfW(Rel) *pRel = NULL, rel;
 	#else
-	ElfW(REL_TYPE) *pRel = NULL, rel;
+		ElfW(REL_TYPE) *pRel = NULL, rel;
 	#endif
 
-	char*	pStrTable;
+	char* pStrTable;
 
 	long totalRelaSize, relEnt = sizeof(rel);
 	char* pBuf;
@@ -581,37 +581,37 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 		return ret;
 	}
 
-	// find dynamic sections
+	// find dynamic segment
 	while (dyn.d_tag != DT_NULL) {
 		switch (dyn.d_tag) {
-			default:
+			case DT_JMPREL:	// address of PLT
+				#if defined(ANDROID)
+					pRel = (ElfW(Rel)*)(image_base + dyn.d_un.d_ptr);
+				#else
+					pRel = (ElfW(REL_TYPE)*)dyn.d_un.d_ptr;
+				#endif
 				break;
-			case DT_JMPREL:		// address of PLT
-			#if defined(ANDROID)
-				pRel = (ElfW(Rel)*)(image_base + dyn.d_un.d_ptr);
-			#else
-				pRel = (ElfW(REL_TYPE)*)dyn.d_un.d_ptr;
-			#endif
-				break;
-			case DT_PLTRELSZ:	// size of PLT relocate
+			case DT_PLTRELSZ:// size of PLT relocate
 				totalRelaSize = dyn.d_un.d_val;
 				break;
-			/*case DT_RELAENT:
-				relaEnt = dyn.d_un.d_val;
+				/*case DT_RELAENT:
+					relaEnt = dyn.d_un.d_val;
 				break;*/
-			case DT_SYMTAB:		// address of symbol table
-			#if defined(ANDROID)
-				pSym = (ElfW(Sym)*)(image_base + dyn.d_un.d_ptr);
-			#else
-				pSym = (ElfW(Sym)*)dyn.d_un.d_ptr;
-			#endif
+			case DT_SYMTAB:	// address of symbol table
+				#if defined(ANDROID)
+					pSym = (ElfW(Sym)*)(image_base + dyn.d_un.d_ptr);
+				#else
+					pSym = (ElfW(Sym)*)dyn.d_un.d_ptr;
+				#endif
 				break;
 			case DT_STRTAB:	// address of string table
-			#if defined(ANDROID)
-				pStrTable = (char*)(image_base + dyn.d_un.d_ptr);
-			#else
-				pStrTable = (char*)dyn.d_un.d_ptr;
-			#endif
+				#if defined(ANDROID)
+					pStrTable = (char*)(image_base + dyn.d_un.d_ptr);
+				#else
+					pStrTable = (char*)dyn.d_un.d_ptr;
+				#endif
+				break;
+			default:
 				break;
 		}
 
@@ -644,9 +644,9 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 
 		// read a symbol in sym table
 		#if defined(ANDROID)
-		ret = read_data(pid, pSym + ELF32_R_SYM(rel.r_info),&sym, sizeof(sym));
+			ret = read_data(pid, pSym + ELF32_R_SYM(rel.r_info),&sym, sizeof(sym));
 		#else
-		ret = read_data(pid, pSym + ELFW_R(SYM)(rel.r_info),&sym, sizeof(sym));
+			ret = read_data(pid, pSym + ELFW_R(SYM)(rel.r_info),&sym, sizeof(sym));
 		#endif
 
 		if (ret != 0) {
