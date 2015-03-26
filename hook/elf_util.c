@@ -507,7 +507,8 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	volatile int ret = -1;
 	volatile ElfW(Ehdr) *pEhdr = NULL, ehdr;	// ELF Header
 	volatile ElfW(Phdr) *pPhdr = NULL, phdr;	// Program Header
-	volatile ElfW(Dyn)  *pDyn = NULL, dyn;
+	volatile ElfW(Dyn)  *pDyn = NULL, dyn;		// 动态链接信息
+	volatile ElfW(Sym) *pSym = NULL, sym;		//
 	char* image_base = NULL;
 
 	#if defined(ANDROID)
@@ -516,7 +517,6 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	ElfW(REL_TYPE) *pRel = NULL, rel;
 	#endif
 
-	volatile ElfW(Sym) *pSym = NULL, sym;
 	char*	pStrTable;
 
 	long totalRelaSize, relEnt = sizeof(rel);
@@ -759,6 +759,13 @@ static int find_name_by_pid(pid_t pid, char* buf, size_t size) {
 
 }
 
+/**
+ @brief 获取模块的起始虚拟地址
+ @param[in] 指定进程pid
+ @param[in] 指定模块名称
+ @return 成功注入返回0, 失败返回错误代码
+ @note 如果模块为空，获取的则是pid模块地址
+**/
 int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 
 	FILE *fin = NULL;
@@ -774,10 +781,13 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 		}
 	}
 
-	if (pid <= 0)
+	ALOGE("find %s by pid %d\n", selfname, pid);
+
+	if (pid <= 0) {
 		snprintf(path, sizeof(path), "/proc/self/maps");
-	else
+	} else {
 		snprintf(path, sizeof(path), "/proc/%d/maps", pid);
+	}
 
 	if ((fin = fopen(path, "r")) == NULL)
 		return errno;
@@ -786,8 +796,10 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 		if (strstr(line, module_name == NULL ? selfname : module_name) != NULL) {
 			pch = strtok(line, "-");
 			addr = strtoul(pch, NULL, 16);
-			if (value != NULL)
+			if (value != NULL) {
 				*value = addr;
+			}
+
 			ret = 0;
 			break;
 		}
