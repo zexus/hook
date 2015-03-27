@@ -83,18 +83,20 @@ int ptrace_get_reg(pid_t pid, int index, long* out) {
 
 	if (out != NULL) {
 		#if defined(ANDROID)
-		struct pt_regs regs;
+			struct pt_regs regs;
 
-		if (ptrace(PTRACE_GETREGS, pid, NULL, &regs) != 0) {
-			return errno;
-		} else {
-			if (out != NULL)
-				*out = regs.uregs[index];
-			return 0;
-		}
+			if (ptrace(PTRACE_GETREGS, pid, NULL, &regs) != 0) {
+				return errno;
+			} else {
+				if (out != NULL) {
+					*out = regs.uregs[index];
+				}
+
+				return 0;
+			}
 		#else
-		*out = ptrace(PTRACE_PEEKUSER, pid, index * sizeof(long), out, NULL);
-		return errno;
+			*out = ptrace(PTRACE_PEEKUSER, pid, index * sizeof(long), out, NULL);
+			return errno;
 		#endif
 	} else {
 		return EINVAL;
@@ -449,14 +451,14 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 		case 3:
 			regs.REG_PASS_PARAM(3) = param_value;
 			break;
-#if !defined (ANDROID)
+	#if !defined (ANDROID)
 		case 4:
 			regs.REG_PASS_PARAM(4) = param_value;
 			break;
 		case 5:
 			regs.REG_PASS_PARAM(5) = param_value;
 			break;
-#endif
+	#endif
 		}
 	}
 
@@ -475,11 +477,13 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 				ALOGE("error: request memory failed\n");
 				return -1;
 			}
+
 			ret = ptrace_write_bytes(pid, remote_addr, param.value, param.size);
 			if (ret != 0) {
 				ALOGE("error: write remote memory failed\n");
 				return ret;
 			}
+
 			param_value = remote_addr;
 		} else {
 			param_value = param.value;
@@ -488,13 +492,20 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 		ptrace_push(pid, param_value, NULL);
 	}
 
-	ret = ptrace_get_reg(pid, REG_SP_INDEX, &(regs.REG_SP));if (ret != 0)ALOGE("get sp failed %d\n", ret);
-	ret = ptrace_set_regs(pid, &regs);if (ret != 0)ALOGE("error line %d\n", __LINE__);
+	ret = ptrace_get_reg(pid, REG_SP_INDEX, &(regs.REG_SP));
+	if (ret != 0) {
+		ALOGE("get sp failed %d\n", ret);
+	}
+
+	ret = ptrace_set_regs(pid, &regs);
+	if (ret != 0) {
+		ALOGE("error line %d\n", __LINE__);
+	}
 
 	if (sp != NULL)
 		*sp = regs.REG_SP;
-#else
-#error "TODO"
+	#else
+	#error "TODO"
 
 	for (i = num_params - 1; i >=0; --j) {
 
@@ -508,6 +519,7 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 				ALOGE("error: request memory failed\n");
 				return -1;
 			}
+
 			ret = ptrace_write_bytes(pid, remote_addr, param.value, param.size);
 			if (ret != 0) {
 				ALOGE("error: write remote memory failed\n");
@@ -528,7 +540,7 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 static void* requestMemoryForPassParam(pid_t pid, int len) {
 	int ret = 0;
 	void *addr;
-    int i = 0;
+	int i = 0;
 	if (sMapBase == NULL) {
 		call_param_t parameters[6];
 		for (i = 0; i < 6; ++i) {
@@ -537,20 +549,22 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 			#endif
 				parameters[i].type = CALL_PARAM_TYPE_CONSTANT;
 		}
-		parameters[0].value = 0; // addr
-		parameters[1].value = 0x4000; // size
-		parameters[2].value = PROT_READ | PROT_WRITE | PROT_EXEC; // prot
-		parameters[3].value = 0x20 | MAP_PRIVATE; // flags
-		parameters[4].value = 0; //fd
-		parameters[5].value = 0; //offset
+
+		parameters[0].value = 0; 					// addr
+		parameters[1].value = 0x4000;					// size
+		parameters[2].value = PROT_READ | PROT_WRITE | PROT_EXEC;	// prot
+		parameters[3].value = 0x20 | MAP_PRIVATE;			// flags MAP_ANONYMOUS: 0x20
+		parameters[4].value = 0;					// fd
+		parameters[5].value = 0;					// offset
 
 		unsigned long map_addr;
-		ret = find_func_by_got(pid, "mmap", NULL, &map_addr); // TODO use find by module base
+		ret = find_func_by_got(pid, "mmap", NULL, &map_addr);		// TODO use find by module base
 		if (ret != 0) {
 			ALOGE("find mmap failed\n");
 			return NULL;
 		}
 
+		ALOGI("mmap address: %p\n", map_addr);
 		unsigned long mem_addr;
 		// it won't cause recursively call because every param is of type CONSTANT.
 		ret = ptrace_call(pid, map_addr, parameters, 6, &mem_addr);
@@ -558,7 +572,7 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 			ALOGE("call mmap failed!\n");
 			return NULL;
 		} else {
-			ALOGI("remote mmap succeed. 0x%lx\n", mem_addr);
+			ALOGI("remote mmap succeed. %p\n", mem_addr);
 		}
 
 		sMapBase = mem_addr;
