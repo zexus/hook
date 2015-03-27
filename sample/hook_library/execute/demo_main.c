@@ -4,7 +4,7 @@
 int main()
 {
     while (1) {
-        Hook_Entry_Test("abc", 9, 9, 9, 9, 9, 9);
+        Hook_Entry_Test("Welcome Hook", 9, 9, 9, 9, 9, 9);
         sleep(3);
 
         // void * pcMapAddr = mmap(0, 0x4000, PROT_READ | PROT_WRITE | PROT_EXEC, 0x20 | MAP_PRIVATE, 0, 0);

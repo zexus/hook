@@ -101,7 +101,7 @@ int HookTest(pid_t nTargetPid) {
 	}
 
 	unsigned long addr, value;
-	const char* tofind = "Hook_Entry";
+	const char* tofind = "Hook_Entry_Test";
 
 	nRet = find_func_by_got(nTargetPid, tofind, &addr, &value);
 
@@ -116,19 +116,25 @@ int HookTest(pid_t nTargetPid) {
 	ALOGI("find_func_by_links: %s found at 0x%lx\n", tofind, value);
 	#endif
 
-	if (nRet == 0) {
-
+	if (0 == nRet) {
 		struct pt_regs regs;
 		ptrace_get_regs(nTargetPid, &regs);
 
-		call_param_t param[6];
-		for (i = 0; i < 6; i++) {
+		call_param_t param[7];
+		for (i = 1; i < 7; i++) {
 			param[i].value = i;
 			#ifndef PARAM_ONLY_BY_STACK
 			param[i].index = i;
 			#endif
 			param[i].type = CALL_PARAM_TYPE_CONSTANT;
 		}
+
+		param[0].value = "I am Hooking!";
+		#ifndef PARAM_ONLY_BY_STACK
+		param[0].index = 0;
+		#endif
+		param[0].size = strlen((char*) param[0].value) + 1;
+		param[0].type = CALL_PARAM_TYPE_POINTER;
 
 		/*
 		param[0].value = (long) "I'm hooked!!!";
