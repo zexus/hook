@@ -547,7 +547,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 	-------------------------------------------------------------------------
 	**/
 
-	// ELF Header Data
+	// Read ELF Header Data
 	if ((ret = read_data(pid, pEhdr, &ehdr, sizeof(ehdr))) != 0) {
 		ALOGE("%s: read ehdr failed\n", __FUNCTION__);
 		return ret;
@@ -775,7 +775,7 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 		}
 	}
 
-	ALOGE("find %s by pid %d\n", selfname, pid);
+	ALOGI("find %s by pid %d\n", selfname, pid);
 
 	if (pid <= 0) {
 		snprintf(path, sizeof(path), "/proc/self/maps");
