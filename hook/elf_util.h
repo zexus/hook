@@ -39,10 +39,11 @@ int find_func_in_link(pid_t pid, const struct link_map* plm, const char* name, u
 
 // if you are sure the symbol you want to find is in the same so which is loaded by both local and remote process.
 // this functions do much less than find by got or link.
-// int find_func_by_module_base(pid_t pid, const char* name, const char* module_name, unsigned long* local_addr);
+void* find_func_by_module_base(pid_t pid, const char* module_name, void* local_addr);
+
 int find_pid_of(const char*process_name);
 
-int get_module_base(pid_t pid, const char* module_name, unsigned long* value);
+void* get_module_base(pid_t pid, const char* module_name);
 
 // TODO how to determine use REL or RELA ?
 #if defined(ANDROID)

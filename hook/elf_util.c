@@ -255,9 +255,9 @@ unsigned long* image_start_addr(pid_t pid) {
 		return (unsigned long*)0x08048000;
 	#endif
 #elif defined(ANDROID)
-	unsigned long value;
-	get_module_base(pid, NULL, &value);
-	return (unsigned long*)value;
+	unsigned long* value;
+	value = get_module_base(pid, NULL);
+	return value;
 #endif
 
 
@@ -760,13 +760,12 @@ static int find_name_by_pid(pid_t pid, char* buf, size_t size) {
  @return 成功注入返回0, 失败返回错误代码
  @note 如果模块为空，获取的则是pid模块地址
 **/
-int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
+void* get_module_base(pid_t pid, const char* module_name) {
 
-	FILE *fin = NULL;
+	FILE* fin = NULL;
 	char path[256] = { 0 }, line[1024] = { 0 }, selfname[1024] = {0};
 	long addr = 0;
-	char*pch;
-	int ret = -1;
+	char* pch;
 
 	if (module_name == NULL) {
 		if (find_name_by_pid(pid, selfname, 1024) != 0) {
@@ -790,11 +789,10 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 		if (strstr(line, module_name == NULL ? selfname : module_name) != NULL) {
 			pch = strtok(line, "-");
 			addr = strtoul(pch, NULL, 16);
-			if (value != NULL) {
-				*value = addr;
+			if (0x8000 == addr) {
+				addr = 0;
 			}
 
-			ret = 0;
 			break;
 		}
 		memset(line, 0, sizeof(line));
@@ -802,7 +800,7 @@ int get_module_base(pid_t pid, const char* module_name, unsigned long* value) {
 
 	fclose(fin);
 
-	return ret;
+	return (void *)addr;
 }
 
 int find_pid_of(const char*process_name) {
@@ -844,23 +842,17 @@ int find_pid_of(const char*process_name) {
 	return pid;
 }
 
-#if 0
-int find_func_by_module_base(pid_t pid, const char* name, const char* module_name, const unsigned long* local_addr, unsigned long *value) {
+void* find_func_by_module_base(pid_t nTargetPid, const char* module_name, void* local_addr) {
 
-	if (module_name == NULL || local_addr == NULL)
+	if (nTargetPid < 0 || module_name == NULL || local_addr == NULL)
 		return -EINVAL;
 
-	void *local_base, *remote_base;
+	void *local_handle, *remote_handle;
 
-	local_base = get_module_base(0, module_name);
-	remote_base = get_module_base(target_pid, module_name);
+	local_handle = get_module_base(-1, module_name);
+	remote_handle = get_module_base(nTargetPid, module_name);
 
-	void * ret_addr = (void*)((unsigned long)local_addr + (unsigned long)remote_handle - (unsigned long)local_handle);
+	void * ret_addr = (void*)((uint32_t)local_addr + (uint32_t)remote_handle - (uint32_t)local_handle);
 
-	if (value != NULL)
-		*value = ret_addr;
-
-	return 0;
+	return ret_addr;
 }
-#endif
-
