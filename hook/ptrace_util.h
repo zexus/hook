@@ -115,6 +115,7 @@ typedef struct {
 
 // after attached, child stopped until continue or detach called.
 int ptrace_attach(pid_t pid);
+long ptrace_retval(struct pt_regs * regs);
 int ptrace_detach(pid_t pid);
 int ptrace_continue(pid_t pid);
 int ptrace_syscall(pid_t pid);

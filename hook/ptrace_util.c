@@ -66,6 +66,17 @@ int ptrace_attach(pid_t nTargetPid) {
 	return 0;
 }
 
+long ptrace_retval(struct pt_regs * regs)
+{
+#if defined(ANDROID)
+    return regs->ARM_r0;
+#elif defined(LINUX)
+    return regs->eax;
+#else
+    #error "Not supported"
+#endif
+}
+
 int ptrace_detach(pid_t pid){
 	return ptrace(PTRACE_DETACH, pid, NULL, NULL) != 0 ? errno : 0;
 }
