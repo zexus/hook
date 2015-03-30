@@ -774,7 +774,7 @@ void* get_module_base(pid_t pid, const char* module_name) {
 		}
 	}
 
-	ALOGI("find %s by pid %d\n", selfname, pid);
+	// ALOGI("find %s by pid %d\n", selfname, pid);
 
 	if (pid <= 0) {
 		snprintf(path, sizeof(path), "/proc/self/maps");
