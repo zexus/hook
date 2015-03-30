@@ -24,7 +24,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libgui \
 	libtinyalsa
 
-LOCAL_LDLIBS += -llog
+LOCAL_LDLIBS += -llog -ldl
 
 LOCAL_MODULE:= hook
 
