@@ -13,8 +13,3 @@ int Hook_Entry_Test(char * pcString, int nValue1, int nValue2, int nValue3, int 
     printf("nValue6++++++++++++++++++++++++++++++++++%d\n", nValue6);
     return 0;
 }
-
-int foo() {
-    printf("foo called++++++++++++++++++++++++++++++++++%d\n", getpid());   // _getpid()
-    return 0;
-}
