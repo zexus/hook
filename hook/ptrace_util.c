@@ -341,7 +341,7 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 	ptrace_pass_param(pid, params, num_params, &value);
 
 	#if !defined(ANDROID)
-		ptrace_push(pid, 0x00, &value);
+	ptrace_push(pid, 0x00, &value);
 	#endif
 
 	ptrace_get_regs(pid, &regs);
@@ -349,7 +349,7 @@ int ptrace_call(pid_t pid, unsigned long addr, const call_param_t *params, int n
 	int offset = 0;
 
 	#if defined (LINUX)
-		offset = ptrace_is_remote_interrupted_in_syscall(pid) ? 2 : 0;
+	offset = ptrace_is_remote_interrupted_in_syscall(pid) ? 2 : 0;
 	#endif
 
 	regs.REG_IP = addr + offset;
@@ -564,18 +564,23 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 		parameters[0].value = 0; 					// addr
 		parameters[1].value = 0x4000;					// size
 		parameters[2].value = PROT_READ | PROT_WRITE | PROT_EXEC;	// prot
-		parameters[3].value = 0x20 | MAP_PRIVATE;			// flags MAP_ANONYMOUS: 0x20
+		parameters[3].value = MAP_ANONYMOUS | MAP_PRIVATE;		// flags MAP_ANONYMOUS: 0x20
 		parameters[4].value = 0;					// fd
 		parameters[5].value = 0;					// offset
 
-		unsigned long map_addr;
-		ret = find_func_by_got(pid, "mmap", NULL, &map_addr);		// TODO use find by module base
-		if (ret != 0) {
-			ALOGE("find mmap failed\n");
-			return NULL;
-		}
+		unsigned long map_addr, map_entry;
+		// ret = find_func_by_got(pid, "mmap", &map_entry, &map_addr);	// TODO use find by module base
+		// if (ret != 0) {
+		//   	ALOGE("find mmap failed\n");
+		//  	return NULL;
+		// } else {
+		// 	ALOGI("find_func_by_got map_addr: %p\n", map_addr);
+		// }
 
-		ALOGI("mmap address: %p\n", map_addr);
+		map_addr = find_func_by_module_base(pid, "/system/lib/libc.so", (void *)mmap);
+		ALOGI("[+] find_func_by_module_base map_addr: %p\n", map_addr);
+
+		ALOGI("[+] mmap address: %p\n", map_addr);
 		unsigned long mem_addr;
 		// it won't cause recursively call because every param is of type CONSTANT.
 		ret = ptrace_call(pid, map_addr, parameters, 6, &mem_addr);
