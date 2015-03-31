@@ -229,8 +229,8 @@ int HookTest(pid_t nTargetPid) {
 		// nRet = ptrace_call(nTargetPid, value, param, 6, NULL);
 		nRet = ptrace_call(nTargetPid, value, param, 7, NULL);
 
-		// printf("Press enter to dlclose and detach\n");
-		// getchar();
+		printf("Press enter to dlclose and detach\n");
+		getchar();
 		ALOGI("ptrace_call ret %d\n", nRet);
 
 		ptrace_set_regs(nTargetPid, &regs);
