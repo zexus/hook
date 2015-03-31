@@ -88,8 +88,8 @@ static int Hookusage() {
 int HookTest(pid_t nTargetPid) {
 	int nRet = 0;
 	int i = 0;
-	// uint8_t *map_base = 0;
-	// void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
+	uint8_t *map_base = 0;
+	void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
 
 	if (nTargetPid < 0) {
 		printf("Invalid process pid: %d\n", nTargetPid);
@@ -123,68 +123,86 @@ int HookTest(pid_t nTargetPid) {
 		ptrace_get_regs(nTargetPid, &regs);
 
 		call_param_t param[7];
-		/*
-		mmap_addr = find_func_by_module_base(nTargetPid, LIBC_PATH, (void *)mmap);
-		ALOGI("[+] Remote mmap address: 0x%lx\n", mmap_addr);
 
-		param[0].value = 0;					// addr
-		param[0].index = 0;
-		param[0].type = CALL_PARAM_TYPE_CONSTANT;
+		// mmap_addr = find_func_by_module_base(nTargetPid, LIBC_PATH, (void *)mmap);
+		// ALOGI("[+] Remote mmap address: 0x%lx\n", mmap_addr);
 
-		param[1].value = 0x4000;				// size
-		param[1].index = 1;
-		param[1].type = CALL_PARAM_TYPE_CONSTANT;
+		// param[0].value = 0;					// addr
+		// param[0].index = 0;
+		// param[0].type = CALL_PARAM_TYPE_CONSTANT;
 
-		param[2].value = PROT_READ | PROT_WRITE | PROT_EXEC;	// prot
-		param[2].index = 2;
-		param[2].type = CALL_PARAM_TYPE_CONSTANT;
+		// param[1].value = 0x4000;				// size
+		// param[1].index = 1;
+		// param[1].type = CALL_PARAM_TYPE_CONSTANT;
 
-		param[3].value = MAP_ANONYMOUS | MAP_PRIVATE;		// flags
-		param[3].index = 3;
-		param[3].type = CALL_PARAM_TYPE_CONSTANT;
+		// param[2].value = PROT_READ | PROT_WRITE | PROT_EXEC;	// prot
+		// param[2].index = 2;
+		// param[2].type = CALL_PARAM_TYPE_CONSTANT;
 
-		param[4].value = 0;					//fd
-		param[4].index = 4;
-		param[4].type = CALL_PARAM_TYPE_CONSTANT;
+		// param[3].value = MAP_ANONYMOUS | MAP_PRIVATE;	// flags
+		// param[3].index = 3;
+		// param[3].type = CALL_PARAM_TYPE_CONSTANT;
 
-		param[5].value = 0;					//offset
-		param[5].index = 5;
-		param[5].type = CALL_PARAM_TYPE_CONSTANT;
+		// param[4].value = 0;					//fd
+		// param[4].index = 4;
+		// param[4].type = CALL_PARAM_TYPE_CONSTANT;
 
-		nRet = ptrace_call(nTargetPid, mmap_addr, param, 6, NULL);
+		// param[5].value = 0;					//offset
+		// param[5].index = 5;
+		// param[5].type = CALL_PARAM_TYPE_CONSTANT;
 
-		map_base = ptrace_retval(&regs);
+		// nRet = ptrace_call(nTargetPid, mmap_addr, param, 6, NULL);
+
+		// map_base = ptrace_retval(&regs);
 
 		dlopen_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlopen );
 		dlsym_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlsym );
 		dlclose_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlclose );
 		dlerror_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlerror );
 
-		ALOGI("[+] Get imports: dlopen: 0x%lx, dlsym: 0x%lx, dlclose: 0x%lx, dlerror: 0x%lx, map_base: 0x%lx\n", dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr, map_base);
+		ALOGI("[+] Get imports: dlopen: 0x%lx, dlsym: 0x%lx, dlclose: 0x%lx, dlerror: 0x%lx\n", dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr);
 
-		ptrace_write_bytes(nTargetPid, map_base, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
-		*/
+		// ptrace_write_bytes(nTargetPid, map_base, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
 		/* call dlopen */
-		// param[0] = map_base;
-		// param[1] = RTLD_NOW | RTLD_GLOBAL;
+		param[0].value = "/system/lib/libhook.so";
+		param[0].size = strlen((char*) (param[0].value)) + 1;
+		#ifndef PARAM_ONLY_BY_STACK
+		param[0].index = 0;
+		#endif
+		param[0].type = CALL_PARAM_TYPE_POINTER;
 
-		// nRet = ptrace_call(nTargetPid, dlopen_addr, param, 2, NULL);
+		param[1].value = RTLD_NOW | RTLD_GLOBAL;
+		#ifndef PARAM_ONLY_BY_STACK
+		param[1].index = 1;
+		#endif
+		param[1].type = CALL_PARAM_TYPE_CONSTANT;
 
-		// void * sohandle = ptrace_retval(&regs);
+		unsigned long sohandle;
+
+		nRet = ptrace_call(nTargetPid, dlopen_addr, param, 2, &sohandle);
+
+		ALOGI("[+] so_handle: %p\n", sohandle);
 
 		/* call dlsym */
-		// #define FUNCTION_NAME_ADDR_OFFSET       0x100
-		// ptrace_write_bytes(nTargetPid, map_base + FUNCTION_NAME_ADDR_OFFSET, "foo", strlen("foo") + 1);
+		param[0].value = sohandle;
+		#ifndef PARAM_ONLY_BY_STACK
+		param[0].index = 0;
+		#endif
+		param[0].type = CALL_PARAM_TYPE_CONSTANT;
 
-		// param[0] = sohandle;
-		// param[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
+		param[1].value = "foo";
+		#ifndef PARAM_ONLY_BY_STACK
+		param[1].index = 1;
+		#endif
+		param[1].type = CALL_PARAM_TYPE_POINTER;
+		param[1].size = strlen((char*) (param[0].value)) + 1;
 
-		// nRet = ptrace_call(nTargetPid, dlsym_addr, param, 2, NULL);
+		unsigned long hook_entry_addr;
 
-		// void * foo_addr = ptrace_retval(&regs);
+		nRet = ptrace_call(nTargetPid, dlsym_addr, param, 2, &hook_entry_addr);
 
-		// ALOGI("foo entry address = %p\n", foo_addr);
+		ALOGI("hook entry address = %p\n", hook_entry_addr);
 
 		for (i = 1; i < 7; i++) {
 			param[i].value = i;
@@ -198,7 +216,7 @@ int HookTest(pid_t nTargetPid) {
 		#ifndef PARAM_ONLY_BY_STACK
 		param[0].index = 0;
 		#endif
-		param[0].size = strlen((char*) param[0].value) + 1;
+		param[0].size = strlen((char*) (param[0].value)) + 1;
 		param[0].type = CALL_PARAM_TYPE_POINTER;
 
 		/*
@@ -208,10 +226,11 @@ int HookTest(pid_t nTargetPid) {
 		param[0].size = strlen((char*) param[0].value) + 1;
 		*/
 
+		// nRet = ptrace_call(nTargetPid, value, param, 6, NULL);
 		nRet = ptrace_call(nTargetPid, value, param, 7, NULL);
 
-		printf("Press enter to dlclose and detach\n");
-		getchar();
+		// printf("Press enter to dlclose and detach\n");
+		// getchar();
 		ALOGI("ptrace_call ret %d\n", nRet);
 
 		ptrace_set_regs(nTargetPid, &regs);
