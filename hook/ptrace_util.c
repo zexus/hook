@@ -401,7 +401,7 @@ int ptrace_wait_signal(pid_t pid, int sig) {
 		ALOGW("%s: expected signal %d but got %d status 0x%x: \"%s\"\n", __FUNCTION__, sig, wsig, status, (const char*)strsignal(wsig));
 		return wsig;
 	} else {
-		ALOGI("got sig %d from pid %d\n", sig, pid);
+		// ALOGI("got sig %d from pid %d\n", sig, pid);
 		return 0;
 	}
 
