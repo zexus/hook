@@ -564,11 +564,11 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 		parameters[0].value = 0; 					// addr
 		parameters[1].value = 0x4000;					// size
 		parameters[2].value = PROT_READ | PROT_WRITE | PROT_EXEC;	// prot
-		parameters[3].value = MAP_ANONYMOUS | MAP_PRIVATE;		// flags MAP_ANONYMOUS: 0x20
+		parameters[3].value = 0x20 | MAP_PRIVATE;			// flags MAP_ANONYMOUS: 0x20
 		parameters[4].value = 0;					// fd
 		parameters[5].value = 0;					// offset
 
-		unsigned long map_addr, map_entry;
+		// unsigned long map_addr, map_entry;
 		// ret = find_func_by_got(pid, "mmap", &map_entry, &map_addr);	// TODO use find by module base
 		// if (ret != 0) {
 		//   	ALOGE("find mmap failed\n");
@@ -577,6 +577,7 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 		// 	ALOGI("find_func_by_got map_addr: %p\n", map_addr);
 		// }
 
+		unsigned long map_addr;
 		map_addr = find_func_by_module_base(pid, "/system/lib/libc.so", (void *)mmap);
 		ALOGI("[+] find_func_by_module_base map_addr: %p\n", map_addr);
 

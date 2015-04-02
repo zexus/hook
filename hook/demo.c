@@ -118,10 +118,10 @@ int HookTest(pid_t nTargetPid) {
 	ALOGI("find_func_by_links: %s found at 0x%lx\n", tofind, value);
 	#endif
 
-	if (0 == nRet) {
-		struct pt_regs regs;
-		ptrace_get_regs(nTargetPid, &regs);
+	struct pt_regs origin_regs;
+	ptrace_get_regs(nTargetPid, &origin_regs);
 
+	if (0 == nRet) {
 		call_param_t param[7];
 
 		// mmap_addr = find_func_by_module_base(nTargetPid, LIBC_PATH, (void *)mmap);
@@ -182,7 +182,13 @@ int HookTest(pid_t nTargetPid) {
 
 		nRet = ptrace_call(nTargetPid, dlopen_addr, param, 2, &sohandle);
 
-		ALOGI("[+] so_handle: %p\n", sohandle);
+		if (0x0 == sohandle) {
+			ALOGE("[+] call dlopen error\n");
+			nRet =  -1;
+			goto exit;
+		} else {
+			ALOGI("[+] so_handle: %p\n", sohandle);
+		}
 
 		/* call dlsym */
 		param[0].value = sohandle;
@@ -196,13 +202,19 @@ int HookTest(pid_t nTargetPid) {
 		param[1].index = 1;
 		#endif
 		param[1].type = CALL_PARAM_TYPE_POINTER;
-		param[1].size = strlen((char*) (param[0].value)) + 1;
+		param[1].size = strlen((char*)param[1].value) + 1;
 
 		unsigned long hook_entry_addr;
 
 		nRet = ptrace_call(nTargetPid, dlsym_addr, param, 2, &hook_entry_addr);
 
-		ALOGI("hook entry address = %p\n", hook_entry_addr);
+		if (0x0 == hook_entry_addr) {
+			ALOGE("[+] call dlsym error\n");
+			nRet = -1;
+			goto exit;
+		} else {
+			ALOGI("[+] hook entry address = %p\n", hook_entry_addr);
+		}
 
 		for (i = 1; i < 7; i++) {
 			param[i].value = i;
@@ -216,7 +228,7 @@ int HookTest(pid_t nTargetPid) {
 		#ifndef PARAM_ONLY_BY_STACK
 		param[0].index = 0;
 		#endif
-		param[0].size = strlen((char*) (param[0].value)) + 1;
+		param[0].size = strlen((char*)param[0].value) + 1;
 		param[0].type = CALL_PARAM_TYPE_POINTER;
 
 		/*
@@ -227,21 +239,22 @@ int HookTest(pid_t nTargetPid) {
 		*/
 
 		// nRet = ptrace_call(nTargetPid, value, param, 6, NULL);
-		nRet = ptrace_call(nTargetPid, value, param, 7, NULL);
+		nRet = ptrace_call(nTargetPid, hook_entry_addr, param, 7, NULL);
 
 		printf("Press enter to dlclose and detach\n");
 		getchar();
 		ALOGI("ptrace_call ret %d\n", nRet);
-
-		ptrace_set_regs(nTargetPid, &regs);
 	}
 	else
 		ALOGE("function %s not found %d\n", tofind, nRet);
 
+exit:
+	ptrace_set_regs(nTargetPid, &origin_regs);
+
 	if (nTargetPid > 0)
 		ptrace_detach(nTargetPid);
 
-	return 0;
+	return nRet;
 }
 
 /**
