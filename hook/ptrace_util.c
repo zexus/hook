@@ -208,8 +208,10 @@ int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t si
 	WORDUN un;
 	int i;
 
-	if (dst == NULL || buf == NULL || size < 0)
-		return EINVAL;
+	if (dst == NULL || buf == NULL || size < 0) {
+        ALOGE("[+] ptrace_write_bytes invalid params\n");
+        return EINVAL;
+	}
 
 	wordCount = size / sizeof(long);
 	byteRemain = size % sizeof(long);
@@ -218,20 +220,20 @@ int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t si
 
 	for (i = 0; i < wordCount; i++, dstAddr++, dataAddr++)
 		if (ptrace(PTRACE_POKEDATA, pid, dstAddr, (void*) (*dataAddr)) != 0) {
-			printf("POKEDATA to 0x%lx failed %d\n", dstAddr, errno);
+			ALOGE("POKEDATA to 0x%lx failed %d\n", dstAddr, errno);
 			return errno;
 		}
 
 	if (byteRemain > 0) {
 		un.value = ptrace(PTRACE_PEEKDATA, pid, dstAddr, NULL);
 		if (errno != 0) {
-			printf("PEEKDATA in write bytes failed %d\n", errno);
+			ALOGE("PEEKDATA in write bytes failed %d\n", errno);
 			return errno;
 		}
 		for (i = 0; i < byteRemain; i++)
 			un.chars[i] = ((char*) dataAddr)[i];
 		if (ptrace(PTRACE_POKEDATA, pid, dstAddr, (void*) (un.value)) != 0) {
-			printf("POKEDATA 0x%lx failed %d\n", dstAddr, errno);
+			ALOGE("POKEDATA 0x%lx failed %d\n", dstAddr, errno);
 			return errno;
 		}
 	}
