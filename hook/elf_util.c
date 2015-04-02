@@ -45,6 +45,18 @@ const char *LINKER_PATH = "/lib/libdl.so.2";
 
 static int find_name_by_pid(pid_t pid, char* buf, size_t size);
 
+int write_data(pid_t pid, void* dst, void* buf, size_t size) {
+	int nRet = 0;
+
+	if (pid == 0) {
+		memcpy(dst, buf, size);
+	} else {
+		nRet = ptrace_write_bytes(pid, dst, buf, size);
+	}
+
+	return nRet;
+}
+
 static int read_data(pid_t pid, void* src, void* buf, size_t size) {
 	int nRet = 0;
 

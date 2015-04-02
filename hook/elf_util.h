@@ -45,6 +45,8 @@ int find_pid_of(const char*process_name);
 
 void* get_module_base(pid_t pid, const char* module_name);
 
+int write_data(pid_t pid, void* dst, void* buf, size_t size);
+
 // TODO how to determine use REL or RELA ?
 #if defined(ANDROID)
 // #error "TODO"
