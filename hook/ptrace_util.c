@@ -589,7 +589,7 @@ static void* requestMemoryForPassParam(pid_t pid, int len) {
 			ALOGE("call mmap failed!\n");
 			return NULL;
 		} else {
-			ALOGI("remote mmap succeed. %p\n", mem_addr);
+			ALOGI("[+] remote mmap succeed. %p\n", mem_addr);
 		}
 
 		sMapBase = mem_addr;
