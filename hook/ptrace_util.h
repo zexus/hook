@@ -127,6 +127,7 @@ int ptrace_get_regs(pid_t pid, struct pt_regs * regs);
 int ptrace_set_regs(pid_t pid, const struct pt_regs * regs);
 
 int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t size);
+int ptrace_writedata(pid_t pid, uint8_t *dest, uint8_t *data, size_t size);
 int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t size);
 int ptrace_push_bytes(pid_t pid, const void *buf, size_t size, unsigned long* sp);
 int ptrace_push(pid_t pid, long value, unsigned long* sp);

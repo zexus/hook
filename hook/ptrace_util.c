@@ -200,6 +200,41 @@ int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t siz
 	return 0;
 }
 
+int ptrace_writedata(pid_t pid, uint8_t *dest, uint8_t *data, size_t size)
+{
+	uint32_t i, j, remain;
+	uint8_t *laddr;
+
+	union u {
+	    long val;
+	    char chars[sizeof(long)];
+	} d;
+
+	j = size / 4;       // 4 bytes
+	remain = size % 4;
+
+	laddr = data;
+
+	for (i = 0; i < j; i ++) {
+	    memcpy(d.chars, laddr, 4);
+	    ptrace(PTRACE_POKETEXT, pid, dest, d.val);  // write
+
+	    dest  += 4;
+	    laddr += 4;
+	}
+
+	if (remain > 0) {
+	    d.val = ptrace(PTRACE_PEEKTEXT, pid, dest, 0);  // read
+	    for (i = 0; i < remain; i ++) {
+		d.chars[i] = *laddr ++;
+	    }
+
+	    ptrace(PTRACE_POKETEXT, pid, dest, d.val);
+	}
+
+	return 0;
+}
+
 int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t size) {
 
 	int wordCount, byteRemain;
