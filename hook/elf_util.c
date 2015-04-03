@@ -51,7 +51,7 @@ int write_data(pid_t pid, void* dst, void* buf, size_t size) {
 	if (pid == 0) {
 		memcpy(dst, buf, size);
 	} else {
-		nRet = ptrace_write_bytes(pid, dst, buf, size);
+		nRet = ptrace_writedata(pid, dst, buf, size);
 	}
 
 	return nRet;

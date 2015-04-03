@@ -290,7 +290,7 @@ int ptrace_push_bytes(pid_t pid, const void *buf, size_t size, unsigned long* sp
 		if ((ret = ptrace_set_reg(pid, REG_SP_INDEX, currentSp)) != 0)
 			return ret;
 		*/
-		if ((ret = ptrace_write_bytes(pid, (unsigned long*)currentSp, buf, len)) != 0)
+		if ((ret = ptrace_writedata(pid, (unsigned long*)currentSp, buf, len)) != 0)
 			return ret;
 
 		regs.REG_SP = currentSp;
@@ -473,7 +473,7 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 				ALOGE("error: request memory failed\n");
 				return -1;
 			}
-			ret = ptrace_write_bytes(pid, remote_addr, param.value, param.size);
+			ret = ptrace_writedata(pid, remote_addr, param.value, param.size);
 			if (ret != 0) {
 				ALOGE("error: write remote memory failed\n");
 				return ret;
@@ -526,7 +526,7 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 				return -1;
 			}
 
-			ret = ptrace_write_bytes(pid, remote_addr, param.value, param.size);
+			ret = ptrace_writedata(pid, remote_addr, param.value, param.size);
 			if (ret != 0) {
 				ALOGE("error: write remote memory failed\n");
 				return ret;
@@ -568,7 +568,7 @@ static int ptrace_pass_param(pid_t pid, const call_param_t *params, int num_para
 				return -1;
 			}
 
-			ret = ptrace_write_bytes(pid, remote_addr, param.value, param.size);
+			ret = ptrace_writedata(pid, remote_addr, param.value, param.size);
 			if (ret != 0) {
 				ALOGE("error: write remote memory failed\n");
 				return ret;
