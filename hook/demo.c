@@ -124,45 +124,12 @@ int HookTest(pid_t nTargetPid) {
 	if (0 == nRet) {
 		call_param_t param[7];
 
-		// mmap_addr = find_func_by_module_base(nTargetPid, LIBC_PATH, (void *)mmap);
-		// ALOGI("[+] Remote mmap address: 0x%lx\n", mmap_addr);
-
-		// param[0].value = 0;					// addr
-		// param[0].index = 0;
-		// param[0].type = CALL_PARAM_TYPE_CONSTANT;
-
-		// param[1].value = 0x4000;				// size
-		// param[1].index = 1;
-		// param[1].type = CALL_PARAM_TYPE_CONSTANT;
-
-		// param[2].value = PROT_READ | PROT_WRITE | PROT_EXEC;	// prot
-		// param[2].index = 2;
-		// param[2].type = CALL_PARAM_TYPE_CONSTANT;
-
-		// param[3].value = MAP_ANONYMOUS | MAP_PRIVATE;	// flags
-		// param[3].index = 3;
-		// param[3].type = CALL_PARAM_TYPE_CONSTANT;
-
-		// param[4].value = 0;					//fd
-		// param[4].index = 4;
-		// param[4].type = CALL_PARAM_TYPE_CONSTANT;
-
-		// param[5].value = 0;					//offset
-		// param[5].index = 5;
-		// param[5].type = CALL_PARAM_TYPE_CONSTANT;
-
-		// nRet = ptrace_call(nTargetPid, mmap_addr, param, 6, NULL);
-
-		// map_base = ptrace_retval(&regs);
-
 		dlopen_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlopen );
 		dlsym_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlsym );
 		dlclose_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlclose );
 		dlerror_addr = find_func_by_module_base(nTargetPid, LINKER_PATH, (void *)dlerror );
 
 		ALOGI("[+] Get imports: dlopen: 0x%lx, dlsym: 0x%lx, dlclose: 0x%lx, dlerror: 0x%lx\n", dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr);
-
-		// ptrace_write_bytes(nTargetPid, map_base, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
 		/* call dlopen */
 		param[0].value = "/system/lib/libhook.so";
@@ -192,15 +159,19 @@ int HookTest(pid_t nTargetPid) {
 
 		/* call dlsym */
 		param[0].value = sohandle;
+
 		#ifndef PARAM_ONLY_BY_STACK
 		param[0].index = 0;
 		#endif
+
 		param[0].type = CALL_PARAM_TYPE_CONSTANT;
 
 		param[1].value = "hook_entry_test";
+
 		#ifndef PARAM_ONLY_BY_STACK
 		param[1].index = 1;
 		#endif
+
 		param[1].type = CALL_PARAM_TYPE_POINTER;
 		param[1].size = strlen((char*)param[1].value) + 1;
 
