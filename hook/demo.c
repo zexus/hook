@@ -197,7 +197,7 @@ int HookTest(pid_t nTargetPid) {
 		#endif
 		param[0].type = CALL_PARAM_TYPE_CONSTANT;
 
-		param[1].value = "hook_entry";
+		param[1].value = "hook_entry_test";
 		#ifndef PARAM_ONLY_BY_STACK
 		param[1].index = 1;
 		#endif
