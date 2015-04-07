@@ -224,7 +224,7 @@ int HookTest(pid_t nTargetPid) {
 			param[i].type = CALL_PARAM_TYPE_CONSTANT;
 		}
 
-		param[0].value = "I am Hooking!";
+		param[0].value = "Hooking";
 		#ifndef PARAM_ONLY_BY_STACK
 		param[0].index = 0;
 		#endif
@@ -249,6 +249,7 @@ int HookTest(pid_t nTargetPid) {
 		ALOGE("function %s not found %d\n", tofind, nRet);
 
 exit:
+	ALOGE("EXIT EXCEPTION\n");
 	ptrace_set_regs(nTargetPid, &origin_regs);
 
 	if (nTargetPid > 0)
