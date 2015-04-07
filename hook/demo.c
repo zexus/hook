@@ -189,9 +189,11 @@ int HookTest(pid_t nTargetPid) {
 
 		for (i = 1; i < 7; i++) {
 			param[i].value = i;
+
 			#ifndef PARAM_ONLY_BY_STACK
 			param[i].index = i;
 			#endif
+
 			param[i].type = CALL_PARAM_TYPE_CONSTANT;
 		}
 
@@ -202,14 +204,6 @@ int HookTest(pid_t nTargetPid) {
 		param[0].size = strlen((char*)param[0].value) + 1;
 		param[0].type = CALL_PARAM_TYPE_POINTER;
 
-		/*
-		param[0].value = (long) "I'm hooked!!!";
-		param[0].index = 0;
-		param[0].type = CALL_PARAM_TYPE_POINTER;
-		param[0].size = strlen((char*) param[0].value) + 1;
-		*/
-
-		// nRet = ptrace_call(nTargetPid, value, param, 6, NULL);
 		nRet = ptrace_call(nTargetPid, hook_entry_addr, param, 7, NULL);
 
 		printf("Press enter to dlclose and detach\n");
