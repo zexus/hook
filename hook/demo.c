@@ -214,7 +214,12 @@ int HookTest(pid_t nTargetPid) {
 		ALOGE("function %s not found %d\n", tofind, nRet);
 
 exit:
-	ALOGE("EXIT EXCEPTION\n");
+	if (0 != nRet) {
+		ALOGE("EXIT EXCEPTION\n");
+	} else {
+		ALOGE("EXIT NORMAL\n");
+	}
+
 	ptrace_set_regs(nTargetPid, &origin_regs);
 
 	if (nTargetPid > 0)
