@@ -208,7 +208,6 @@ int HookTest(pid_t nTargetPid) {
 
 		printf("Press enter to dlclose and detach\n");
 		getchar();
-		ALOGI("ptrace_call ret %d\n", nRet);
 	}
 	else
 		ALOGE("function %s not found %d\n", tofind, nRet);
