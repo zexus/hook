@@ -187,7 +187,7 @@ int HookTest(pid_t nTargetPid) {
 			ALOGI("[+] hook entry address = %p\n", hook_entry_addr);
 		}
 
-		for (i = 1; i < 7; i++) {
+		for (i = 2; i < 7; i++) {
 			param[i].value = i;
 
 			#ifndef PARAM_ONLY_BY_STACK
@@ -203,6 +203,13 @@ int HookTest(pid_t nTargetPid) {
 		#endif
 		param[0].size = strlen((char*)param[0].value) + 1;
 		param[0].type = CALL_PARAM_TYPE_POINTER;
+
+		param[1].value = hook_entry_addr;
+		#ifndef PARAM_ONLY_BY_STACK
+		param[1].index = 1;
+		#endif
+		param[1].size = strlen((char*)param[1].value) + 1;
+		param[1].type = CALL_PARAM_TYPE_CONSTANT;
 
 		nRet = ptrace_call(nTargetPid, hook_entry_addr, param, 7, NULL);
 
