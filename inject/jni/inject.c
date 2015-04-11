@@ -378,8 +378,9 @@ int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_ad
 
     if (ptrace_getregs(target_pid, regs) == -1)
         return -1;
-    DEBUG_PRINT("[+] Target process returned from %s, return value=%x, pc=%x \n",
-            func_name, ptrace_retval(regs), ptrace_ip(regs));
+
+    DEBUG_PRINT("[+] Target process returned from %s, return value=%x, pc=%x \n", func_name, ptrace_retval(regs), ptrace_ip(regs));
+
     return 0;
 }
 
@@ -396,7 +397,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
         _dlsym_param2_s, _dlclose_addr_s, _inject_start_s, _inject_end_s, _inject_function_param_s, \
         _saved_cpsr_s, _saved_r0_pc_s;
 
-    uint32_t code_length;
     long parameters[10];
 
     DEBUG_PRINT("[+] Injecting process: %d\n", target_pid);
