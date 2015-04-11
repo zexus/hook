@@ -496,7 +496,8 @@ int main(int argc, char** argv) {
     if (0 != nRet) {
         DEBUG_PRINT("Inject %d process error\n");
         return -1;
+    } else {
+        printf("Inject %d process success\n");
+        return 0;
     }
-
-    return 0;
 }
