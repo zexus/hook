@@ -4,6 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := libhook
 
+LOCAL_LDFLAGS := -ldemo_hook
+
 LOCAL_LDLIBS := -ldemo_hook
 
 LOCAL_SRC_FILES := hook.c
