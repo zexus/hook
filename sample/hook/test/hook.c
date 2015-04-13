@@ -4,7 +4,7 @@
 
 int (*Old_Hook_Entry_Test)(char * pcString, int nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6) = -1;
 
-int hook_entry()
+int hook_internal()
 {
     return 0;
 }
@@ -13,6 +13,6 @@ int hook_entry_test(char * pcString, unsigned long nValue1, int nValue2, int nVa
     Old_Hook_Entry_Test = Hook_Entry_Test;
     printf("Old_Hook_Entry_Test Address++++++++++++++%p\n", Hook_Entry_Test);
     printf("nValue1++++++++++++++++++++++++++++++++++%p\n", nValue1);
-    hook_entry();
+    hook_internal();
     return 0;
 }
