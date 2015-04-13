@@ -149,8 +149,8 @@ int HookTest(pid_t nTargetPid) {
 
 		nRet = ptrace_call(nTargetPid, dlopen_addr, param, 2, &sohandle);
 
-		if (0x0 == sohandle) {
-			ALOGE("[+] call dlopen error\n");
+		if (NULL == sohandle) {
+			ALOGE("[+] call dlopen error: %s\n", dlerror());
 			nRet =  -1;
 			goto exit;
 		} else {
