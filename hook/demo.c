@@ -24,7 +24,7 @@ Original version
 #include <link.h>
 #include <sys/reg.h>
 #elif defined(ANDROID)
-#include <sys/user.h>
+#include <asm/user.h>
 #include <asm/ptrace.h>
 #else
 #endif

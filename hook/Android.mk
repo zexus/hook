@@ -26,6 +26,8 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_LDLIBS += -llog -ldl
 
+LOCAL_LDFLAGS += -ldl
+
 LOCAL_MODULE:= hook
 
 include $(BUILD_EXECUTABLE)
