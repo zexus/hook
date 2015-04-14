@@ -136,7 +136,7 @@ int hook_internal(char * pcTargetLib)
 
                         break;
                     } else if (got_item == New_Hook_Entry_Test) {
-                        DEBUG_PRINT("Already hooked\n");
+                        DEBUG_PRINT("[+] Already hooked\n");
                         break;
                     }
                 }
