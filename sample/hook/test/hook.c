@@ -126,7 +126,7 @@ int hook_internal(char * pcTargetLib)
                 for (i = 0; i < out_size; i += 4) {
                     got_item = *(uint32_t *)(out_addr + i);
                     if (got_item  == Old_Hook_Entry_Test) {
-                        DEBUG_PRINT("[+] Found eglSwapBuffers in got section\n");
+                        DEBUG_PRINT("[+] Found Old_Hook_Entry_Test in got section\n");
                         got_found = 1;
 
                         uint32_t page_size = getpagesize();                                         // 获取分页大小
