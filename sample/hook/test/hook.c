@@ -16,7 +16,7 @@
 #define DEBUG_PRINT(format,args...)
 #endif
 
-int (*Old_Hook_Entry_Test)(char * pcString, int nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6) = -1;
+int (*Old_Hook_Entry_Test)(char * pcString, int nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6);
 
 int New_Hook_Entry_Test(char * pcString, unsigned long nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6)
 {
@@ -163,7 +163,7 @@ exit:
 int hook_entry_test(char * pcString, unsigned long nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6) {
     Old_Hook_Entry_Test = Hook_Entry_Test;
     printf("Old_Hook_Entry_Test Address++++++++++++++%p\n", Hook_Entry_Test);
-    printf("nValue1++++++++++++++++++++++++++++++++++%p\n", nValue1);
+    New_Hook_Entry_Test("New_Hook_Entry_Test", 1, 2, 3, 4, 5, 6);
     hook_internal("/system/lib/libdemo_hook.so");
     return 0;
 }
