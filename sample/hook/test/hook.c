@@ -162,7 +162,8 @@ exit:
 
 int hook_entry_test(char * pcString, unsigned long nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6) {
     Old_Hook_Entry_Test = Hook_Entry_Test;
-    printf("Old_Hook_Entry_Test Address++++++++++++++%p\n", Hook_Entry_Test);
+    DEBUG_PRINT("Hook_Entry_Test Address++++++++++++++++++%p\n", Hook_Entry_Test);
+    DEBUG_PRINT("New_Hook_Entry_Test Address++++++++++++++%p\n", New_Hook_Entry_Test);
     New_Hook_Entry_Test("New_Hook_Entry_Test", 1, 2, 3, 4, 5, 6);
     hook_internal("/system/lib/libdemo_hook.so");
     return 0;

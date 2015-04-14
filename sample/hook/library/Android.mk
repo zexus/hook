@@ -8,6 +8,6 @@ LOCAL_SRC_FILES := demo_hook.c
 
 LOCAL_LDLIBS += -llog
 
-LOCAL_LDFLAGS += -Wl,--no-warn-shared-textrel -ldl -O0 -fPIC
+LOCAL_LDFLAGS += -Wl,--no-warn-shared-textrel -ldl -O0
 
 include $(BUILD_SHARED_LIBRARY)
