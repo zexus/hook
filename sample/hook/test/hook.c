@@ -127,6 +127,7 @@ int hook_internal(char * pcTargetLib)
                     got_item = *(uint32_t *)(out_addr + i);
                     if (got_item  == Old_Hook_Entry_Test) {
                         DEBUG_PRINT("[+] Found Old_Hook_Entry_Test in got section\n");
+                        DEBUG_PRINT("[+] Got section: %lx\n", got_item);
                         got_found = 1;
 
                         uint32_t page_size = getpagesize();                                         // 获取分页大小
@@ -162,8 +163,8 @@ exit:
 
 int hook_entry_test(char * pcString, unsigned long nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6) {
     Old_Hook_Entry_Test = Hook_Entry_Test;
-    DEBUG_PRINT("[+] Hook_Entry_Test Address++++++++++++++++++%p\n", Hook_Entry_Test);
-    DEBUG_PRINT("[+] New_Hook_Entry_Test Address++++++++++++++%p\n", New_Hook_Entry_Test);
+    DEBUG_PRINT("[+] Hook_Entry_Test Address: %p\n", Hook_Entry_Test);
+    DEBUG_PRINT("[+] New_Hook_Entry_Test Address: %p\n", New_Hook_Entry_Test);
     hook_internal("/system/lib/libdemo_hook.so");
     return 0;
 }
