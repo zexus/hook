@@ -183,7 +183,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     DEBUG_PRINT("[+] Get imports: dlopen: %x, dlsym: %x, dlclose: %x, dlerror: %x\n",
             dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr);
 
-    printf("memory malloc base address = %x\n", map_base);
     ptrace_writedata(target_pid, map_base, library_path, strlen(library_path) + 1);
 
     parameters[0] = map_base;
@@ -225,6 +224,11 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
 
 exit:
     return ret;
+}
+
+int inject_local_process(pid_t target_pid, const char *library_path, const char *function_name, const char *param, size_t param_size)
+{
+    return 0;
 }
 
 int main(int argc, char** argv) {
