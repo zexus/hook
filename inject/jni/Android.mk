@@ -5,6 +5,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := inject
 
 LOCAL_SRC_FILES :=  inject.c \
+                    elf_utils.c \
                     ptrace_utils.c
 
 LOCAL_CFLAGS += -pie -fPIE

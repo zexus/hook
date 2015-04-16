@@ -1,0 +1,1 @@
+int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, unsigned long* entry_value);
