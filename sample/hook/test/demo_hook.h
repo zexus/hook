@@ -1,1 +1,0 @@
-int Hook_Entry_Test(char * pcString, int nValue1, int nValue2, int nValue3, int nValue4, int nValue5, int nValue6);
