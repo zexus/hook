@@ -138,14 +138,9 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
 {
     int ret = -1;
     void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
-    void *local_handle, *remote_handle, *dlhandle;
     uint8_t *map_base = 0;
-    uint8_t *dlopen_param1_ptr, *dlsym_param2_ptr, *saved_r0_pc_ptr, *inject_param_ptr, *remote_code_ptr, *local_code_ptr;
 
     struct pt_regs regs, original_regs;
-    extern uint32_t _dlopen_addr_s, _dlopen_param1_s, _dlopen_param2_s, _dlsym_addr_s, \
-        _dlsym_param2_s, _dlclose_addr_s, _inject_start_s, _inject_end_s, _inject_function_param_s, \
-        _saved_cpsr_s, _saved_r0_pc_s;
 
     long parameters[10];
 
@@ -215,8 +210,8 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     //getchar();
     parameters[0] = sohandle;
 
-    if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
-        goto exit;
+    //if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
+        //goto exit;
 
     ptrace_setregs(target_pid, &original_regs);
     ptrace_detach(target_pid);
@@ -228,25 +223,80 @@ exit:
 
 int inject_local_process(pid_t target_pid, const char *library_path, const char *function_name, const char *param, size_t param_size)
 {
-    return 0;
+    int ret = -1;
+    void *local_handle, *entry_addr;
+    unsigned long value1;
+
+    if (ptrace_attach(target_pid) == -1)
+        goto exit;
+
+    unsigned long addr, value;
+    const char* tofind = "Hook_Entry_Test";
+    ret = find_func_by_got(target_pid, tofind, &addr, &value);
+    DEBUG_PRINT("%s found by got addr: 0x%lx entry: 0x%lx\n", tofind, value, addr);
+
+    local_handle = dlopen(library_path, RTLD_NOW | RTLD_GLOBAL);
+    if (NULL == local_handle)
+    {
+        DEBUG_PRINT("dlopen error, %s", dlerror());
+        return -1;
+    }
+
+    entry_addr = dlsym(local_handle, function_name);
+    if (NULL == entry_addr)
+    {
+        DEBUG_PRINT("dlsym error, %s", dlerror());
+        return -1;
+    }
+
+    value1 = get_remote_addr(target_pid, "/system/lib/libhook_test.so", entry_addr);
+
+    unsigned char buf[4];
+    buf[0] = value1&0xFF;
+    buf[1] = (value1&0xFF00) >> 8;
+    buf[2] = (value1&0xFF0000) >> 16;
+    buf[3] = (value1&0xFF000000) >> 24;
+    ptrace_writedata(target_pid, addr, buf, 4);
+
+    ptrace_detach(target_pid);
+    ret = 0;
+
+exit:
+    return ret;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     pid_t target_pid;
     int nRet = -1;
 
+    char* end = NULL;
+    if (argv[1][0] == '-' && argv[1][1] == 'n')
+    {
+        target_pid = strtol(argv[2], &end, 10);
+    }
+
+    nRet = inject_remote_process(target_pid, "/system/lib/libhook_test.so", "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+    nRet = inject_local_process(target_pid, "/system/lib/libhook_test.so", "New_Hook_Entry_Test",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+    if (0 != nRet)
+    {
+        DEBUG_PRINT("Inject local process %d error\n", target_pid);
+        return -1;
+    }
+
     target_pid = find_pid_of("/system/bin/surfaceflinger");
-    if (-1 == target_pid) {
+    if (-1 == target_pid)
+    {
         DEBUG_PRINT("Can't find the process\n");
         return -1;
     }
 
     nRet = inject_remote_process(target_pid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
-    if (0 != nRet) {
-        DEBUG_PRINT("Inject %d process error\n", target_pid);
+    if (0 != nRet)
+    {
+        DEBUG_PRINT("Inject remote process %d error\n", target_pid);
         return -1;
-    } else {
-        DEBUG_PRINT("Inject %d process success\n", target_pid);
-        return 0;
     }
+
+    return 0;
 }
