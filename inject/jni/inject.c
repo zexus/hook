@@ -12,10 +12,6 @@
 #include <elf.h>
 #include <android/log.h>
 
-#if defined(__i386__)
-#define pt_regs user_regs_struct
-#endif
-
 #define ENABLE_DEBUG 1
 
 #if ENABLE_DEBUG
