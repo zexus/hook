@@ -161,7 +161,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     if (ptrace_getregs(target_pid, &regs) == -1)
         goto exit;
 
-    /* save original registers */
     memcpy(&original_regs, &regs, sizeof(regs));
 
     mmap_addr = get_remote_addr(target_pid, libc_path, (void *)mmap);
@@ -178,7 +177,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     if (ptrace_call_wrapper(target_pid, "mmap", mmap_addr, parameters, 6, &regs) == -1)
         goto exit;
 
-    map_base = ptrace_retval(&regs);    // memory-malloc base address
+    map_base = ptrace_retval(&regs);
 
     dlopen_addr = get_remote_addr( target_pid, linker_path, (void *)dlopen );
     dlsym_addr = get_remote_addr( target_pid, linker_path, (void *)dlsym );
@@ -194,7 +193,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     parameters[0] = map_base;
     parameters[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    // (void *)dlopen(map_base, RTLD_NOW | RTLD_GLOBAL);
     if (ptrace_call_wrapper(target_pid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
         goto exit;
 
@@ -205,7 +203,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     parameters[0] = sohandle;
     parameters[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
 
-    // (void *)dlsym(handle, "hook_entry")
     if (ptrace_call_wrapper(target_pid, "dlsym", dlsym_addr, parameters, 2, &regs) == -1)
         goto exit;
 
@@ -216,7 +213,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, param, strlen(param) + 1);
     parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
-    // hook_entry("I'm parameter!");
     if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 1, &regs) == -1)
         goto exit;
 
@@ -227,7 +223,6 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
         goto exit;
 
-    /* restore */
     ptrace_setregs(target_pid, &original_regs);
     ptrace_detach(target_pid);
     ret = 0;
