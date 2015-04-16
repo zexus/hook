@@ -10,7 +10,7 @@ LOCAL_LDFLAGS += -pie -fPIE
 
 #shellcode.s
 
-LOCAL_LDLIBS += -L$(SYSROOT)/usr/lib -llog
+LOCAL_LDLIBS += -L$(SYSROOT)/usr/lib -llog -ldl
 
 #LOCAL_FORCE_STATIC_EXECUTABLE := true
 

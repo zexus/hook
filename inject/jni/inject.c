@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <asm/user.h>
+#include <sys/user.h>
 #include <asm/ptrace.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -456,7 +456,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
         goto exit;
 
     void * hook_entry_addr = ptrace_retval(&regs);
-    DEBUG_PRINT("hook_entry_addr = %p\n", hook_entry_addr);
+    DEBUG_PRINT("[+] hook_entry_addr = %p\n", hook_entry_addr);
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
     ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, param, strlen(param) + 1);
@@ -494,10 +494,10 @@ int main(int argc, char** argv) {
 
     nRet = inject_remote_process(target_pid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
     if (0 != nRet) {
-        DEBUG_PRINT("Inject %d process error\n");
+        DEBUG_PRINT("Inject %d process error\n", target_pid);
         return -1;
     } else {
-        printf("Inject %d process success\n");
+        DEBUG_PRINT("Inject %d process success\n", target_pid);
         return 0;
     }
 }
