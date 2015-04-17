@@ -231,48 +231,57 @@ exit:
     return ret;
 }
 
-int MZHOOK_InjectLibToLocal(pid_t target_pid, const char *library_path, const char *function_name)
+int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char * pcSrcFunc, const char * pcDstFunc)
 {
-    int ret = -1;
-    void *local_handle, *entry_addr;
-    unsigned long value1;
+    int nRet = -1;
+    unsigned char acBuf[4];
+    void * pvLocalHandle, * pvLocalAddr;
+    unsigned long ulDstAddr, ulDstEntry;
+    unsigned long ulRemoteAddr;
 
-    if (ptrace_attach(target_pid) == -1)
+    if (ptrace_attach(nTargetPid) == -1)
         goto exit;
 
-    unsigned long addr, value;
-    const char* tofind = "Hook_Entry_Test";
-    ret = find_func_by_got(target_pid, tofind, &addr, &value);
-    ALOGI("[+] %s found by got addr: 0x%lx entry: 0x%lx\n", tofind, value, addr);
-
-    local_handle = dlopen(library_path, RTLD_NOW | RTLD_GLOBAL);
-    if (NULL == local_handle)
+    nRet = find_func_by_got(nTargetPid, pcDstFunc, &ulDstAddr, &ulDstEntry);
+    if (0 != nRet || NULL == ulDstAddr || NULL == ulDstEntry)
     {
-        ALOGE("dlopen error, %s", dlerror());
-        return -1;
+        ALOGE("[%s,%d] failed nTargetPid(%d) pcDstFunc(0x%x)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcDstFunc);
+        goto exit;
     }
 
-    entry_addr = dlsym(local_handle, function_name);
-    if (NULL == entry_addr)
+    ALOGI("[+] %s found by got addr: 0x%lx entry: 0x%lx\n", pcDstFunc, ulDstEntry, ulDstAddr);
+
+    pvLocalHandle = dlopen(pcSrcLib, RTLD_NOW | RTLD_GLOBAL);
+    if (NULL == pvLocalHandle)
     {
-        ALOGE("dlsym error, %s", dlerror());
-        return -1;
+        ALOGE("[%s,%d] dlopen pcSrcLib(0x%x) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib);
+        goto exit;
     }
 
-    value1 = get_remote_addr(target_pid, library_path, entry_addr);
+    pvLocalAddr = dlsym(pvLocalHandle, pcSrcFunc);
+    if (NULL == pvLocalAddr)
+    {
+        ALOGE("[%s,%d] dlsym pcSrcFunc(0x%x) in local_handle(0x%x) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcFunc, pvLocalHandle);
+        goto exit;
+    }
 
-    unsigned char buf[4];
-    buf[0] = value1&0xFF;
-    buf[1] = (value1&0xFF00) >> 8;
-    buf[2] = (value1&0xFF0000) >> 16;
-    buf[3] = (value1&0xFF000000) >> 24;
-    ptrace_writedata(target_pid, addr, buf, 4);
+    ulRemoteAddr = get_remote_addr(nTargetPid, pcSrcLib, pvLocalAddr);
 
-    ptrace_detach(target_pid);
-    ret = 0;
+    acBuf[0] = (ulRemoteAddr&0xFF);
+    acBuf[1] = (ulRemoteAddr&0xFF00) >> 8;
+    acBuf[2] = (ulRemoteAddr&0xFF0000) >> 16;
+    acBuf[3] = (ulRemoteAddr&0xFF000000) >> 24;
+
+    ptrace_writedata(nTargetPid, ulDstAddr, acBuf, 4);
+
+    ptrace_detach(nTargetPid);
+    nRet = 0;
 
 exit:
-    return ret;
+    return nRet;
 }
 
 int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
@@ -404,7 +413,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc);
+    nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc, pcDstFunc);
     if (0 != nRet)
     {
         ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
