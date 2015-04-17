@@ -399,6 +399,12 @@ int main(int argc, char** argv)
     {
         nTargetPid = strtol(argv[2], &end, 10);
     }
+    else
+    {
+        ALOGE("[%s,%d] invalid parameters\n", \
+              __FUNCTION__, __LINE__);
+        return -1;
+    }
 
     char * pcSrcLib = "/system/lib/libhook_test.so";
     char * pcDstLib = "";
