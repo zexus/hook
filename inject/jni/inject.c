@@ -37,7 +37,6 @@
 
 const char *libc_path = "/system/lib/libc.so";
 const char *linker_path = "/system/bin/linker";
-const char *libhook_path = "/system/lib/libhook.so";
 
 extern int hook_entry(char *pcTargetLib);
 
@@ -394,49 +393,60 @@ int main(int argc, char** argv)
     int nRet = -1;
     pid_t nTargetPid;
 
-    char* end = NULL;
-    if (argv[1][0] == '-' && argv[1][1] == 'n')
-    {
-        nTargetPid = strtol(argv[2], &end, 10);
-    }
-    else
-    {
-        ALOGE("[%s,%d] invalid parameters\n", \
-              __FUNCTION__, __LINE__);
-        return -1;
-    }
-
     char * pcSrcLib = "/system/lib/libhook_test.so";
-    char * pcDstLib = "";
+    char * pcDstLib = "/system/lib/libhook.so";
     char * pcSrcFunc = "New_Hook_Entry_Test";
     char * pcDstFunc = "Hook_Entry_Test";
 
-    nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
-    if (0 != nRet)
+    if (NULL == pcDstLib)
     {
-        ALOGE("[%s,%d] inject source library(%s) to  remote pid(%d) failed\n", \
-              __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
-        return -1;
-    }
+        char* end = NULL;
+        if (argv[1][0] == '-' && argv[1][1] == 'n')
+        {
+            nTargetPid = strtol(argv[2], &end, 10);
+        }
+        else
+        {
+            ALOGE("[%s,%d] invalid parameters\n", \
+                  __FUNCTION__, __LINE__);
+            return -1;
+        }
 
-    nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc, pcDstFunc);
-    if (0 != nRet)
+        nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
+        if (0 != nRet)
+        {
+            ALOGE("[%s,%d] inject source library(%s) to  remote pid(%d) failed\n", \
+                  __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
+            return -1;
+        }
+
+        nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc, pcDstFunc);
+        if (0 != nRet)
+        {
+            ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+                  __FUNCTION__, __LINE__, pcSrcLib, getpid());
+            return -1;
+        }
+
+        //nRet = MZHOOK_ModifyGotAddr(nTargetPid, pcDstFunc);
+        //if (0 != nRet)
+        //{
+        //    ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+        //          __FUNCTION__, __LINE__, pcSrcLib, getpid());
+        //    return -1;
+        //}
+    }
+    else
     {
-        ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
-              __FUNCTION__, __LINE__, pcSrcLib, getpid());
-        return -1;
+        nTargetPid = find_pid_of("/system/bin/surfaceflinger");
+        nRet = inject_remote_process(nTargetPid, pcDstLib, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+        if (0 != nRet)
+        {
+            ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+                  __FUNCTION__, __LINE__, pcSrcLib, getpid());
+            return -1;
+        }
     }
-
-    //nRet = MZHOOK_ModifyGotAddr(nTargetPid, pcDstFunc);
-    //if (0 != nRet)
-    //{
-    //    ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
-    //          __FUNCTION__, __LINE__, pcSrcLib, getpid());
-    //    return -1;
-    //}
-
-    //nTargetPid = find_pid_of("/system/bin/surfaceflinger");
-    //nRet = inject_remote_process(nTargetPid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
 
     return 0;
 }
