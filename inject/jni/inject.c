@@ -285,7 +285,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * library_path)
 
     long parameters[6];
 
-    ALOGI("[+] Injecting process: %d\n", nTargetPid);
+    ALOGI("[%s,%d] Injecting process: %d\n", __FUNCTION__, __LINE__, nTargetPid);
 
     if (ptrace_attach(nTargetPid) == -1)
         goto exit;
@@ -337,6 +337,11 @@ exit:
     return ret;
 }
 
+int MZHOOK_ModifyGotAddr()
+{
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     int nRet = -1;
@@ -356,7 +361,8 @@ int main(int argc, char** argv)
     nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
     if (0 != nRet)
     {
-        ALOGE("Inject remote library error\n");
+        ALOGE("[%s,%d] inject pcSrcLib(0x%x) to  nTargetPid(%d) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcSrcLib);
         return -1;
     }
 
@@ -365,6 +371,12 @@ int main(int argc, char** argv)
     {
         ALOGE("Inject local library error\n");
         return -1;
+    }
+
+    nRet = MZHOOK_ModifyGotAddr();
+    if (0 != nRet)
+    {
+        ALOGE("13446");
     }
 
     //nTargetPid = find_pid_of("/system/bin/surfaceflinger");
