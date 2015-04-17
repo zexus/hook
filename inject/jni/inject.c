@@ -342,9 +342,42 @@ exit:
     return nRet;
 }
 
-int MZHOOK_ModifyGotAddr()
+int MZHOOK_ModifyGotAddr(int nTargetPid, char * pcDstFunc)
 {
-    return 0;
+    int nRet = -1;
+    unsigned long ulDstAddr, ulDstEntry;
+    struct pt_regs sTempRegs, sOrinRegs;
+
+    if (ptrace_attach(nTargetPid) == -1)
+    {
+        ALOGE("[%s,%d] attach pid(%d) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid);
+        goto exit;
+    }
+
+    if (ptrace_getregs(nTargetPid, &sTempRegs) == -1)
+    {
+        ALOGE("[%s,%d] failed to get pid(%d) registers value\n", \
+              __FUNCTION__, __LINE__, nTargetPid);
+        goto exit;
+    }
+
+    memcpy(&sOrinRegs, &sTempRegs, sizeof(sTempRegs));
+
+    nRet = find_func_by_got(nTargetPid, pcDstFunc, &ulDstAddr, &ulDstEntry);
+    if (0 != nRet || NULL == ulDstAddr || NULL == ulDstEntry)
+    {
+        ALOGE("[%s,%d] failed nTargetPid(%d) pcDstFunc(0x%x)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcDstFunc);
+        goto exit;
+    }
+
+    nRet = 0;
+
+exit:
+    ptrace_setregs(nTargetPid, &sOrinRegs);
+    ptrace_detach(nTargetPid);
+    return nRet;
 }
 
 int main(int argc, char** argv)
@@ -366,7 +399,7 @@ int main(int argc, char** argv)
     nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
     if (0 != nRet)
     {
-        ALOGE("[%s,%d] inject source library(%s) to  target pid(%d) failed\n", \
+        ALOGE("[%s,%d] inject source library(%s) to  remote pid(%d) failed\n", \
               __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
         return -1;
     }
@@ -374,14 +407,17 @@ int main(int argc, char** argv)
     nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc);
     if (0 != nRet)
     {
-        ALOGE("Inject local library error\n");
+        ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, getpid());
         return -1;
     }
 
-    nRet = MZHOOK_ModifyGotAddr();
+    nRet = MZHOOK_ModifyGotAddr(nTargetPid, pcDstFunc);
     if (0 != nRet)
     {
-        ALOGE("13446");
+        ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, getpid());
+        return -1;
     }
 
     //nTargetPid = find_pid_of("/system/bin/surfaceflinger");
