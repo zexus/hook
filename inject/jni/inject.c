@@ -277,10 +277,10 @@ int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char 
 
     ptrace_writedata(nTargetPid, ulDstAddr, acBuf, 4);
 
-    ptrace_detach(nTargetPid);
     nRet = 0;
 
 exit:
+    ptrace_detach(nTargetPid);
     return nRet;
 }
 
@@ -421,13 +421,13 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    nRet = MZHOOK_ModifyGotAddr(nTargetPid, pcDstFunc);
-    if (0 != nRet)
-    {
-        ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
-              __FUNCTION__, __LINE__, pcSrcLib, getpid());
-        return -1;
-    }
+    //nRet = MZHOOK_ModifyGotAddr(nTargetPid, pcDstFunc);
+    //if (0 != nRet)
+    //{
+    //    ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+    //          __FUNCTION__, __LINE__, pcSrcLib, getpid());
+    //    return -1;
+    //}
 
     //nTargetPid = find_pid_of("/system/bin/surfaceflinger");
     //nRet = inject_remote_process(nTargetPid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
