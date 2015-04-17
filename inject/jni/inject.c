@@ -157,13 +157,12 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     mmap_addr = get_remote_addr(target_pid, libc_path, (void *)mmap);
     DEBUG_PRINT("[+] Remote mmap address: %x\n", mmap_addr);
 
-    /* call mmap */
-    parameters[0] = 0;  // addr
-    parameters[1] = 0x4000; // size
-    parameters[2] = PROT_READ | PROT_WRITE | PROT_EXEC;  // prot
-    parameters[3] =  MAP_ANONYMOUS | MAP_PRIVATE; // flags
-    parameters[4] = 0; //fd
-    parameters[5] = 0; //offset
+    parameters[0] = 0;
+    parameters[1] = 0x4000;
+    parameters[2] = PROT_READ | PROT_WRITE | PROT_EXEC;
+    parameters[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
+    parameters[4] = 0;
+    parameters[5] = 0;
 
     if (ptrace_call_wrapper(target_pid, "mmap", mmap_addr, parameters, 6, &regs) == -1)
         goto exit;
@@ -210,8 +209,8 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     //getchar();
     parameters[0] = sohandle;
 
-    //if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
-        //goto exit;
+    if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
+        goto exit;
 
     ptrace_setregs(target_pid, &original_regs);
     ptrace_detach(target_pid);
@@ -221,7 +220,7 @@ exit:
     return ret;
 }
 
-int inject_local_process(pid_t target_pid, const char *library_path, const char *function_name, const char *param, size_t param_size)
+int inject_local_library(pid_t target_pid, const char *library_path, const char *function_name)
 {
     int ret = -1;
     void *local_handle, *entry_addr;
@@ -265,6 +264,68 @@ exit:
     return ret;
 }
 
+int inject_remote_library(pid_t target_pid, const char * library_path)
+{
+    int ret = -1;
+    void *mmap_addr, *dlopen_addr;
+    uint8_t *map_base = 0;
+
+    struct pt_regs regs, original_regs;
+
+    long parameters[6];
+
+    DEBUG_PRINT("[+] Injecting process: %d\n", target_pid);
+
+    if (ptrace_attach(target_pid) == -1)
+        goto exit;
+
+    if (ptrace_getregs(target_pid, &regs) == -1)
+        goto exit;
+
+    memcpy(&original_regs, &regs, sizeof(regs));
+
+    mmap_addr = get_remote_addr(target_pid, libc_path, (void *)mmap);
+    DEBUG_PRINT("[+] Remote mmap address: %x\n", mmap_addr);
+
+    parameters[0] = 0;
+    parameters[1] = 0x4000;
+    parameters[2] = PROT_READ | PROT_WRITE | PROT_EXEC;
+    parameters[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
+    parameters[4] = 0;
+    parameters[5] = 0;
+
+    if (ptrace_call_wrapper(target_pid, "mmap", mmap_addr, parameters, 6, &regs) == -1)
+        goto exit;
+
+    map_base = ptrace_retval(&regs);
+
+    dlopen_addr = get_remote_addr( target_pid, linker_path, (void *)dlopen );
+
+    DEBUG_PRINT("[+] Get imports: dlopen: %x\n", dlopen_addr);
+
+    ptrace_writedata(target_pid, map_base, library_path, strlen(library_path) + 1);
+
+    parameters[0] = map_base;
+    parameters[1] = RTLD_NOW | RTLD_GLOBAL;
+
+    if (ptrace_call_wrapper(target_pid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
+        goto exit;
+
+    void * sohandle = ptrace_retval(&regs);
+    if (NULL == sohandle)
+    {
+        DEBUG_PRINT("[+] Call dlopen in remote process error\n");
+        goto exit;
+    }
+
+    ret = 0;
+
+exit:
+    ptrace_setregs(target_pid, &original_regs);
+    ptrace_detach(target_pid);
+    return ret;
+}
+
 int main(int argc, char** argv)
 {
     pid_t target_pid;
@@ -276,8 +337,8 @@ int main(int argc, char** argv)
         target_pid = strtol(argv[2], &end, 10);
     }
 
-    nRet = inject_remote_process(target_pid, "/system/lib/libhook_test.so", "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
-    nRet = inject_local_process(target_pid, "/system/lib/libhook_test.so", "New_Hook_Entry_Test",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+    nRet = inject_remote_library(target_pid, "/system/lib/libhook_test.so");
+    nRet = inject_local_library(target_pid, "/system/lib/libhook_test.so", "New_Hook_Entry_Test");
     if (0 != nRet)
     {
         DEBUG_PRINT("Inject local process %d error\n", target_pid);
