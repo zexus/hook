@@ -15,11 +15,22 @@
 #define ENABLE_DEBUG 1
 
 #if ENABLE_DEBUG
-#define  LOG_TAG "INJECT"
-#define  LOGD(fmt, args...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, fmt, ##args)
-#define DEBUG_PRINT(format,args...) LOGD(format, ##args)
+    #define TAG "INJECT"
+    #define ALOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
+    #define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
+    #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+    #define ALOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
+    #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+    #define ALOGF(...) __android_log_print(ANDROID_LOG_FATAL, TAG, __VA_ARGS__)
+    #define ASTDERR(...)
 #else
-#define DEBUG_PRINT(format,args...)
+    #define ALOGV(...)
+    #define ALOGD(...)
+    #define ALOGI(...)
+    #define ALOGW(...)
+    #define ALOGE(...)
+    #define ALOGF(...)
+    #define ASTDERR(...)
 #endif
 
 #define CPSR_T_MASK     ( 1u << 5 )
@@ -73,7 +84,7 @@ void* get_remote_addr(pid_t target_pid, const char* module_name, void* local_add
     local_handle = get_module_base(-1, module_name);
     remote_handle = get_module_base(target_pid, module_name);
 
-    DEBUG_PRINT("[+] get_remote_addr: local[%x], remote[%x]\n", local_handle, remote_handle);
+    ALOGI("[+] get_remote_addr: local[%x], remote[%x]\n", local_handle, remote_handle);
 
     void * ret_addr = (void *)((uint32_t)local_addr + (uint32_t)remote_handle - (uint32_t)local_handle);
 
@@ -122,14 +133,14 @@ int find_pid_of(const char *process_name)
 
 int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_addr, long * parameters, int param_num, struct pt_regs * regs)
 {
-    DEBUG_PRINT("[+] Calling %s in target process.\n", func_name);
+    ALOGI("[+] Calling %s in target process.\n", func_name);
     if (ptrace_call(target_pid, (uint32_t)func_addr, parameters, param_num, regs) == -1)
         return -1;
 
     if (ptrace_getregs(target_pid, regs) == -1)
         return -1;
 
-    DEBUG_PRINT("[+] Target process returned from %s, return value=%x, pc=%x \n", func_name, ptrace_retval(regs), ptrace_ip(regs));
+    ALOGI("[+] Target process returned from %s, return value=%x, pc=%x \n", func_name, ptrace_retval(regs), ptrace_ip(regs));
 
     return 0;
 }
@@ -144,7 +155,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
 
     long parameters[10];
 
-    DEBUG_PRINT("[+] Injecting process: %d\n", target_pid);
+    ALOGI("[+] Injecting process: %d\n", target_pid);
 
     if (ptrace_attach(target_pid) == -1)
         goto exit;
@@ -155,7 +166,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     memcpy(&original_regs, &regs, sizeof(regs));
 
     mmap_addr = get_remote_addr(target_pid, libc_path, (void *)mmap);
-    DEBUG_PRINT("[+] Remote mmap address: %x\n", mmap_addr);
+    ALOGI("[+] Remote mmap address: %x\n", mmap_addr);
 
     parameters[0] = 0;
     parameters[1] = 0x4000;
@@ -174,7 +185,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     dlclose_addr = get_remote_addr( target_pid, linker_path, (void *)dlclose );
     dlerror_addr = get_remote_addr( target_pid, linker_path, (void *)dlerror );
 
-    DEBUG_PRINT("[+] Get imports: dlopen: %x, dlsym: %x, dlclose: %x, dlerror: %x\n",
+    ALOGI("[+] Get imports: dlopen: %x, dlsym: %x, dlclose: %x, dlerror: %x\n",
             dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr);
 
     ptrace_writedata(target_pid, map_base, library_path, strlen(library_path) + 1);
@@ -196,7 +207,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
         goto exit;
 
     void * hook_entry_addr = ptrace_retval(&regs);
-    DEBUG_PRINT("[+] hook_entry_addr = %p\n", hook_entry_addr);
+    ALOGI("[+] hook_entry_addr = %p\n", hook_entry_addr);
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
     ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, param, strlen(param) + 1);
@@ -232,19 +243,19 @@ int inject_local_library(pid_t target_pid, const char *library_path, const char 
     unsigned long addr, value;
     const char* tofind = "Hook_Entry_Test";
     ret = find_func_by_got(target_pid, tofind, &addr, &value);
-    DEBUG_PRINT("%s found by got addr: 0x%lx entry: 0x%lx\n", tofind, value, addr);
+    ALOGI("[+] %s found by got addr: 0x%lx entry: 0x%lx\n", tofind, value, addr);
 
     local_handle = dlopen(library_path, RTLD_NOW | RTLD_GLOBAL);
     if (NULL == local_handle)
     {
-        DEBUG_PRINT("dlopen error, %s", dlerror());
+        ALOGE("dlopen error, %s", dlerror());
         return -1;
     }
 
     entry_addr = dlsym(local_handle, function_name);
     if (NULL == entry_addr)
     {
-        DEBUG_PRINT("dlsym error, %s", dlerror());
+        ALOGE("dlsym error, %s", dlerror());
         return -1;
     }
 
@@ -274,7 +285,7 @@ int inject_remote_library(pid_t target_pid, const char * library_path)
 
     long parameters[6];
 
-    DEBUG_PRINT("[+] Injecting process: %d\n", target_pid);
+    ALOGI("[+] Injecting process: %d\n", target_pid);
 
     if (ptrace_attach(target_pid) == -1)
         goto exit;
@@ -285,7 +296,7 @@ int inject_remote_library(pid_t target_pid, const char * library_path)
     memcpy(&original_regs, &regs, sizeof(regs));
 
     mmap_addr = get_remote_addr(target_pid, libc_path, (void *)mmap);
-    DEBUG_PRINT("[+] Remote mmap address: %x\n", mmap_addr);
+    ALOGI("[+] Remote mmap address: %x\n", mmap_addr);
 
     parameters[0] = 0;
     parameters[1] = 0x4000;
@@ -301,7 +312,7 @@ int inject_remote_library(pid_t target_pid, const char * library_path)
 
     dlopen_addr = get_remote_addr( target_pid, linker_path, (void *)dlopen );
 
-    DEBUG_PRINT("[+] Get imports: dlopen: %x\n", dlopen_addr);
+    ALOGI("[+] Get imports: dlopen: %x\n", dlopen_addr);
 
     ptrace_writedata(target_pid, map_base, library_path, strlen(library_path) + 1);
 
@@ -314,7 +325,7 @@ int inject_remote_library(pid_t target_pid, const char * library_path)
     void * sohandle = ptrace_retval(&regs);
     if (NULL == sohandle)
     {
-        DEBUG_PRINT("[+] Call dlopen in remote process error\n");
+        ALOGE("[+] Call dlopen in remote process error\n");
         goto exit;
     }
 
@@ -341,21 +352,21 @@ int main(int argc, char** argv)
     nRet = inject_local_library(target_pid, "/system/lib/libhook_test.so", "New_Hook_Entry_Test");
     if (0 != nRet)
     {
-        DEBUG_PRINT("Inject local process %d error\n", target_pid);
+        ALOGE("Inject local process %d error\n", target_pid);
         return -1;
     }
 
     target_pid = find_pid_of("/system/bin/surfaceflinger");
     if (-1 == target_pid)
     {
-        DEBUG_PRINT("Can't find the process\n");
+        ALOGE("Can't find the process\n");
         return -1;
     }
 
     nRet = inject_remote_process(target_pid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
     if (0 != nRet)
     {
-        DEBUG_PRINT("Inject remote process %d error\n", target_pid);
+        ALOGE("Inject remote process %d error\n", target_pid);
         return -1;
     }
 
