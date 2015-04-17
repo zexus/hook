@@ -275,17 +275,22 @@ exit:
     return ret;
 }
 
-int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * library_path)
+int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 {
-    int ret = -1;
+    int nRet = -1;
     void *mmap_addr, *dlopen_addr;
     uint8_t *map_base = 0;
 
     struct pt_regs regs, original_regs;
 
-    long parameters[6];
+    long alParams[6];
 
-    ALOGI("[%s,%d] Injecting process: %d\n", __FUNCTION__, __LINE__, nTargetPid);
+    if (0 > nTargetPid || NULL == pcSrcLib)
+    {
+        ALOGE("[%s,%d] invalid parameters: nTargetPid(%d) or pcSrcLib(0x%x)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcSrcLib);
+        return -1;
+    }
 
     if (ptrace_attach(nTargetPid) == -1)
         goto exit;
@@ -298,14 +303,14 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * library_path)
     mmap_addr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
     ALOGI("[+] Remote mmap address: %x\n", mmap_addr);
 
-    parameters[0] = 0;
-    parameters[1] = 0x4000;
-    parameters[2] = PROT_READ | PROT_WRITE | PROT_EXEC;
-    parameters[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
-    parameters[4] = 0;
-    parameters[5] = 0;
+    alParams[0] = 0;
+    alParams[1] = 0x4000;
+    alParams[2] = PROT_READ | PROT_WRITE | PROT_EXEC;
+    alParams[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
+    alParams[4] = 0;
+    alParams[5] = 0;
 
-    if (ptrace_call_wrapper(nTargetPid, "mmap", mmap_addr, parameters, 6, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "mmap", mmap_addr, alParams, 6, &regs) == -1)
         goto exit;
 
     map_base = ptrace_retval(&regs);
@@ -314,12 +319,12 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * library_path)
 
     ALOGI("[+] Get imports: dlopen: %x\n", dlopen_addr);
 
-    ptrace_writedata(nTargetPid, map_base, library_path, strlen(library_path) + 1);
+    ptrace_writedata(nTargetPid, map_base, pcSrcLib, strlen(pcSrcLib) + 1);
 
-    parameters[0] = map_base;
-    parameters[1] = RTLD_NOW | RTLD_GLOBAL;
+    alParams[0] = map_base;
+    alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "dlopen", dlopen_addr, alParams, 2, &regs) == -1)
         goto exit;
 
     void * sohandle = ptrace_retval(&regs);
@@ -329,12 +334,12 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * library_path)
         goto exit;
     }
 
-    ret = 0;
+    nRet = 0;
 
 exit:
     ptrace_setregs(nTargetPid, &original_regs);
     ptrace_detach(nTargetPid);
-    return ret;
+    return nRet;
 }
 
 int MZHOOK_ModifyGotAddr()
@@ -361,8 +366,8 @@ int main(int argc, char** argv)
     nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
     if (0 != nRet)
     {
-        ALOGE("[%s,%d] inject pcSrcLib(0x%x) to  nTargetPid(%d) failed\n", \
-              __FUNCTION__, __LINE__, nTargetPid, pcSrcLib);
+        ALOGE("[%s,%d] inject source library(%s) to  target pid(%d) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
         return -1;
     }
 
