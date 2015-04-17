@@ -259,7 +259,7 @@ int inject_local_library(pid_t target_pid, const char *library_path, const char 
         return -1;
     }
 
-    value1 = get_remote_addr(target_pid, "/system/lib/libhook_test.so", entry_addr);
+    value1 = get_remote_addr(target_pid, library_path, entry_addr);
 
     unsigned char buf[4];
     buf[0] = value1&0xFF;
@@ -339,36 +339,36 @@ exit:
 
 int main(int argc, char** argv)
 {
-    pid_t target_pid;
     int nRet = -1;
+    pid_t nTargetPid;
 
     char* end = NULL;
     if (argv[1][0] == '-' && argv[1][1] == 'n')
     {
-        target_pid = strtol(argv[2], &end, 10);
+        nTargetPid = strtol(argv[2], &end, 10);
     }
 
-    nRet = inject_remote_library(target_pid, "/system/lib/libhook_test.so");
-    nRet = inject_local_library(target_pid, "/system/lib/libhook_test.so", "New_Hook_Entry_Test");
+    char * pcSrcLib = "/system/lib/libhook_test.so";
+    char * pcDstLib = "";
+    char * pcSrcFunc = "New_Hook_Entry_Test";
+    char * pcDstFunc = "Hook_Entry_Test";
+
+    nRet = inject_remote_library(nTargetPid, pcSrcLib);
     if (0 != nRet)
     {
-        ALOGE("Inject local process %d error\n", target_pid);
+        ALOGE("Inject remote library error\n");
         return -1;
     }
 
-    target_pid = find_pid_of("/system/bin/surfaceflinger");
-    if (-1 == target_pid)
-    {
-        ALOGE("Can't find the process\n");
-        return -1;
-    }
-
-    nRet = inject_remote_process(target_pid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+    nRet = inject_local_library(nTargetPid, pcSrcLib, pcSrcFunc);
     if (0 != nRet)
     {
-        ALOGE("Inject remote process %d error\n", target_pid);
+        ALOGE("Inject local library error\n");
         return -1;
     }
+
+    //nTargetPid = find_pid_of("/system/bin/surfaceflinger");
+    //nRet = inject_remote_process(nTargetPid, libhook_path, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
 
     return 0;
 }
