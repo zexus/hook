@@ -144,7 +144,7 @@ int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_ad
     return 0;
 }
 
-int MZHOOK_InjectProToRemote(pid_t target_pid, const char *library_path, const char *function_name, const char *param, size_t param_size)
+int inject_remote_process(pid_t target_pid, const char *library_path, const char *function_name, const char *param, size_t param_size)
 {
     int ret = -1;
     void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
@@ -439,7 +439,7 @@ int main(int argc, char** argv)
     else
     {
         nTargetPid = find_pid_of("/system/bin/surfaceflinger");
-        nRet = MZHOOK_InjectProToRemote(nTargetPid, pcDstLib, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+        nRet = inject_remote_process(nTargetPid, pcDstLib, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
         if (0 != nRet)
         {
             ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \

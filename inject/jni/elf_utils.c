@@ -7,11 +7,22 @@
 #define ENABLE_DEBUG 1
 
 #if ENABLE_DEBUG
-#define  LOG_TAG "INJECT"
-#define  LOGD(fmt, args...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, fmt, ##args)
-#define DEBUG_PRINT(format,args...) LOGD(format, ##args)
+    #define TAG "INJECT"
+    #define ALOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
+    #define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
+    #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+    #define ALOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
+    #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+    #define ALOGF(...) __android_log_print(ANDROID_LOG_FATAL, TAG, __VA_ARGS__)
+    #define ASTDERR(...)
 #else
-#define DEBUG_PRINT(format,args...)
+    #define ALOGV(...)
+    #define ALOGD(...)
+    #define ALOGI(...)
+    #define ALOGW(...)
+    #define ALOGE(...)
+    #define ALOGF(...)
+    #define ASTDERR(...)
 #endif
 
 typedef union
@@ -46,7 +57,8 @@ int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t siz
 		*(dstAddr) = ptrace(PTRACE_PEEKDATA, pid, srcAddr, NULL);
 		if (errno != 0)
         {
-			DEBUG_PRINT("PEEKDATA from addr 0x%lx failed %d %s\n", srcAddr, errno, strerror(errno));
+			ALOGE("[%s,%d] PEEKDATA from addr 0x%lx failed %d %s\n", \
+				  __FUNCTION__, __LINE__, srcAddr, errno, strerror(errno));
 			return errno;
 		}
 	}
@@ -60,7 +72,7 @@ int ptrace_read_bytes(pid_t pid, const unsigned long *src, void *buf, size_t siz
 		un.value = ptrace(PTRACE_PEEKDATA, pid, srcAddr, NULL);
 		if (errno != 0)
         {
-			DEBUG_PRINT("PEEKDATA from addr 0x%lx failed %d %s\n", srcAddr, errno, strerror(errno));
+			ALOGE("PEEKDATA from addr 0x%lx failed %d %s\n", srcAddr, errno, strerror(errno));
 			return errno;
 		}
 
@@ -81,7 +93,7 @@ int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t si
 
 	if (dst == NULL || buf == NULL || size < 0)
 	{
-		DEBUG_PRINT("[+] ptrace_write_bytes invalid params\n");
+		ALOGE("[+] ptrace_write_bytes invalid params\n");
 		return EINVAL;
 	}
 
@@ -94,7 +106,7 @@ int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t si
 	{
 		if (ptrace(PTRACE_POKEDATA, pid, dstAddr, (void*) (*dataAddr)) != 0)
 		{
-			DEBUG_PRINT("POKEDATA to 0x%lx failed %d\n", dstAddr, errno);
+			ALOGE("POKEDATA to 0x%lx failed %d\n", dstAddr, errno);
 			return errno;
 		}
 	}
@@ -104,7 +116,7 @@ int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t si
 		un.value = ptrace(PTRACE_PEEKDATA, pid, dstAddr, NULL);
 		if (errno != 0)
 		{
-			DEBUG_PRINT("PEEKDATA in write bytes failed %d\n", errno);
+			ALOGE("PEEKDATA in write bytes failed %d\n", errno);
 			return errno;
 		}
 
@@ -115,7 +127,7 @@ int ptrace_write_bytes(pid_t pid, unsigned long *dst, const void *buf, size_t si
 
 		if (ptrace(PTRACE_POKEDATA, pid, dstAddr, (void*) (un.value)) != 0)
 		{
-			DEBUG_PRINT("POKEDATA 0x%lx failed %d\n", dstAddr, errno);
+			ALOGE("POKEDATA 0x%lx failed %d\n", dstAddr, errno);
 			return errno;
 		}
 	}
@@ -220,7 +232,7 @@ void * get_module_base_internal(pid_t pid, const char* module_name)
     {
 		if (find_name_by_pid(pid, selfname, 1024) != 0)
         {
-			DEBUG_PRINT("find name by pid %d failed %d\n", pid, errno);
+			ALOGE("find name by pid %d failed %d\n", pid, errno);
 			return errno;
 		}
 	}
@@ -313,7 +325,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 
 	if ((ret = read_data(pid, pEhdr, &ehdr, sizeof(ehdr))) != 0)
     {
-		DEBUG_PRINT("%s: read ehdr failed\n", __FUNCTION__);
+		ALOGE("%s: read ehdr failed\n", __FUNCTION__);
 		return ret;
 	}
 
@@ -324,7 +336,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 
 		if ((ret = read_data(pid, pPhdr, &phdr, sizeof(phdr))) != 0)
         {
-			DEBUG_PRINT("%s: read phdr failed\n", __FUNCTION__);
+			ALOGE("%s: read phdr failed\n", __FUNCTION__);
 			return ret;
 		}
 
@@ -374,19 +386,19 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 
 	if (pRel == NULL || pSym == NULL || pStrTable == NULL)
     {
-		DEBUG_PRINT("%s: cannot find dynamic sections\n", __FUNCTION__);
+		ALOGE("%s: cannot find dynamic sections\n", __FUNCTION__);
 		return -1;
 	}
 
 	if (totalRelaSize == 0)
     {
-		DEBUG_PRINT("%s: total rela size is 0\n", __FUNCTION__);
+		ALOGE("%s: total rela size is 0\n", __FUNCTION__);
 		return -1;
 	}
 
 	if (relEnt == 0)
     {
-		DEBUG_PRINT("%s: cannot find rela entry size, set to %d\n", __FUNCTION__, sizeof(rel));
+		ALOGE("%s: cannot find rela entry size, set to %d\n", __FUNCTION__, sizeof(rel));
 		relEnt = sizeof(rel);
 	}
 
@@ -403,7 +415,7 @@ int find_func_by_got(pid_t pid, const char* name, unsigned long* entry_addr, uns
 
 		if (ret != 0)
         {
-			DEBUG_PRINT("%s read rel entry %d failed\n", __FUNCTION__, i);
+			ALOGE("%s read rel entry %d failed\n", __FUNCTION__, i);
 			return ret;
 		}
 
