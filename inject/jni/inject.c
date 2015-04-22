@@ -207,11 +207,11 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs) == -1)
         goto exit;
 
-    void * sohandle = ptrace_retval(&sTempRegs);
+    void * pvLibHandle = ptrace_retval(&sTempRegs);
 
 #define FUNCTION_NAME_ADDR_OFFSET       0x100
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_NAME_ADDR_OFFSET, "hook_entry", strlen("hook_entry") + 1);
-    alParams[0] = sohandle;
+    alParams[0] = pvLibHandle;
     alParams[1] = pnMapBase + FUNCTION_NAME_ADDR_OFFSET;
 
     if (ptrace_call_wrapper(nTargetPid, "dlsym", pvDlsymAddr, alParams, 2, &sTempRegs) == -1)
@@ -251,7 +251,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     if (ptrace_call_wrapper(nTargetPid, "hook_entry", pvHookEntryAddr, alParams, 5, &sTempRegs) == -1)
         goto exit;
 
-    alParams[0] = sohandle;
+    alParams[0] = pvLibHandle;
 
     if (ptrace_call_wrapper(nTargetPid, "dlclose", dlclose, alParams, 1, &sTempRegs) == -1)
         goto exit;
@@ -324,7 +324,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     void *pvMmapAddr, *pvDlopenAddr;
     uint8_t * pnMapBase = NULL;
 
-    struct pt_regs regs, original_regs;
+    struct pt_regs sTempRegs, sOrinRegs;
 
     long alParams[6];
 
@@ -335,13 +335,23 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
         return -1;
     }
 
-    if (ptrace_attach(nTargetPid) == -1)
+    nRet = ptrace_attach(nTargetPid);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] attach nTargetPid(%d) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid);
         goto exit;
+    }
 
-    if (ptrace_getregs(nTargetPid, &regs) == -1)
+    nRet = ptrace_getregs(nTargetPid, &sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] get registers from nTargetPid(%d) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid);
         goto exit;
+    }
 
-    memcpy(&original_regs, &regs, sizeof(regs));
+    memcpy(&sOrinRegs, &sTempRegs, sizeof(sTempRegs));
 
     pvMmapAddr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
 
@@ -352,10 +362,10 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     alParams[4] = 0;
     alParams[5] = 0;
 
-    if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
         goto exit;
 
-    pnMapBase = ptrace_retval(&regs);
+    pnMapBase = ptrace_retval(&sTempRegs);
 
     pvDlopenAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlopen );
 
@@ -364,11 +374,11 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     alParams[0] = pnMapBase;
     alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs) == -1)
         goto exit;
 
-    void * sohandle = ptrace_retval(&regs);
-    if (NULL == sohandle)
+    void * pvLibHandle = ptrace_retval(&sTempRegs);
+    if (NULL == pvLibHandle)
     {
         ALOGE("[+] Call dlopen in remote process error\n");
         goto exit;
@@ -377,7 +387,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     nRet = 0;
 
 exit:
-    ptrace_setregs(nTargetPid, &original_regs);
+    ptrace_setregs(nTargetPid, &sOrinRegs);
     ptrace_detach(nTargetPid);
     return nRet;
 }
