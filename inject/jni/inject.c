@@ -228,25 +228,25 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     ALOGI("[%s,%d] enter to entry addr(0x%lx)\n", \
           __FUNCTION__, __LINE__, pvHookEntryAddr);
 
-#define FUNCTION_PARAM_ADDR_OFFSET      0x200
-    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcFuncLib, strlen(pcFuncLib) + 1);
-    alParams[0] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
+#define FUNCTION_FUNC_LIB_OFFSET      0x200
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_FUNC_LIB_OFFSET, pcFuncLib, strlen(pcFuncLib) + 1);
+    alParams[0] = pnMapBase + FUNCTION_FUNC_LIB_OFFSET;
 
-#define FUNCTION_PARAM_ADDR_OFFSET      0x300
-    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcSrcLib, strlen(pcSrcLib) + 1);
-    alParams[1] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
+#define FUNCTION_SRC_LIB_OFFSET      0x300
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_SRC_LIB_OFFSET, pcSrcLib, strlen(pcSrcLib) + 1);
+    alParams[1] = pnMapBase + FUNCTION_SRC_LIB_OFFSET;
 
-#define FUNCTION_PARAM_ADDR_OFFSET      0x400
-    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
-    alParams[2] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
+#define FUNCTION_DST_LIB_OFFSET      0x400
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_DST_LIB_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
+    alParams[2] = pnMapBase + FUNCTION_DST_LIB_OFFSET;
 
-#define FUNCTION_PARAM_ADDR_OFFSET      0x500
-    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
-    alParams[3] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
+#define FUNCTION_SRC_FUNC_OFFSET      0x500
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_SRC_FUNC_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
+    alParams[3] = pnMapBase + FUNCTION_SRC_FUNC_OFFSET;
 
-#define FUNCTION_PARAM_ADDR_OFFSET      0x600
-    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
-    alParams[4] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
+#define FUNCTION_DST_FUNC_OFFSET      0x600
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_DST_FUNC_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
+    alParams[4] = pnMapBase + FUNCTION_DST_FUNC_OFFSET;
 
     if (ptrace_call_wrapper(nTargetPid, "hook_entry", pvHookEntryAddr, alParams, 5, &sTempRegs) == -1)
         goto exit;
