@@ -40,92 +40,132 @@ const char * pcLinkerPath = "/system/bin/linker";
 
 extern int hook_entry(char *pcTargetLib);
 
-void* get_module_base(pid_t pid, const char* module_name)
+static void * MZHOOK_GetModuleBase(pid_t nTargetPid, const char * pcModuleName)
 {
-    FILE *fp;
-    long addr = 0;
-    char *pch;
-    char filename[32];
-    char line[1024];
+    long lModuleAddr = 0;
+    char szFileName[32];
+    char szLine[1024];
+    FILE * pcFileDes;
+    char * pcString;
 
-    if (pid < 0)
+    if (nTargetPid < 0)
     {
-        snprintf(filename, sizeof(filename), "/proc/self/maps");
-    } else {
-        snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
+        snprintf(szFileName, sizeof(szFileName), "/proc/self/maps");
+    }
+    else
+    {
+        snprintf(szFileName, sizeof(szFileName), "/proc/%d/maps", nTargetPid);
     }
 
-    fp = fopen(filename, "r");
+    pcFileDes = fopen(szFileName, "r");
+    if (NULL == pcFileDes)
+    {
+        ALOGE("[%s,%d] open szFileName(%s) failed\n", \
+              __FUNCTION__, __LINE__, szFileName);
+        return NULL;
+    }
 
-    if (fp != NULL) {
-        while (fgets(line, sizeof(line), fp)) {
-            if (strstr(line, module_name)) {
-                pch = strtok( line, "-" );
-                addr = strtoul( pch, NULL, 16 );
-
-                if (addr == 0x8000)
-                    addr = 0;
-
+    if (NULL != pcFileDes)
+    {
+        while (fgets(szLine, sizeof(szLine), pcFileDes))
+        {
+            if (strstr(szLine, pcModuleName))
+            {
+                pcString = strtok(szLine, "-");
+                lModuleAddr = strtoul(pcString, NULL, 16);
+                if (lModuleAddr == 0x8000)
+                {
+                    lModuleAddr = 0;
+                }
                 break;
             }
         }
-
-        fclose(fp) ;
+        fclose(pcFileDes) ;
     }
 
-    return (void *)addr;
+    return (void *)lModuleAddr;
 }
 
-void* get_remote_addr(pid_t target_pid, const char* module_name, void* local_addr)
+static void * MZHOOK_GetRemoteAddr(pid_t nTargetPid, const char * pcModuleName, void * pcLocalAddr)
 {
-    void* local_handle, *remote_handle;
+    void * pvLocalHandle = NULL;
+    void * pvRemoteHandle = NULL;
 
-    local_handle = get_module_base(-1, module_name);
-    remote_handle = get_module_base(target_pid, module_name);
-    void * ret_addr = (void *)((uint32_t)local_addr + (uint32_t)remote_handle - (uint32_t)local_handle);
-
-    return ret_addr;
-}
-
-int find_pid_of(const char *process_name)
-{
-    int id;
-    pid_t pid = -1;
-    DIR* dir;
-    FILE *fp;
-    char filename[32];
-    char cmdline[256];
-
-    struct dirent * entry;
-
-    if (process_name == NULL)
-        return -1;
-
-    dir = opendir("/proc");
-    if (dir == NULL)
-        return -1;
-
-    while((entry = readdir(dir)) != NULL)
+    pvLocalHandle = MZHOOK_GetModuleBase(-1, pcModuleName);
+    if (NULL == pvLocalHandle)
     {
-        id = atoi(entry->d_name);
-        if (id != 0) {
-            sprintf(filename, "/proc/%d/cmdline", id);
-            fp = fopen(filename, "r");
-            if (fp) {
-                fgets(cmdline, sizeof(cmdline), fp);
-                fclose(fp);
+        ALOGE("[%s,%d] get self process module base address pcModuleName(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, pcModuleName);
+        return NULL;
+    }
 
-                if (strcmp(process_name, cmdline) == 0)
+    pvRemoteHandle = MZHOOK_GetModuleBase(nTargetPid, pcModuleName);
+    if (NULL == pvRemoteHandle)
+    {
+        ALOGE("[%s,%d] get nTargetPid(%d) process module base pcModuleName address(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcModuleName);
+        return NULL;
+    }
+
+    void * pvTargetAddr = (void *)((uint32_t)pcLocalAddr + (uint32_t)pvRemoteHandle - (uint32_t)pvLocalHandle);
+    if (NULL == pvTargetAddr)
+    {
+        ALOGE("[%s,%d] process module base remote address failed pcLocalAddr(0x%lx) pvRemoteHandle(0x%lx) pvLocalHandle(0x%lx)\n", \
+              __FUNCTION__, __LINE__, pcLocalAddr, pvRemoteHandle, pvLocalHandle);
+        return NULL;
+    }
+
+    return pvTargetAddr;
+}
+
+int MZ_FindPidOfProcess(const char * pcProcessName)
+{
+    int nId;
+    pid_t nTargetPid = -1;
+    DIR * pcDirectory = NULL;
+    FILE * pcFileDes = NULL;
+    char szFileName[32];
+    char szCmdLine[256];
+    struct dirent * sDirectoryEntry;
+
+    if (NULL == pcProcessName)
+    {
+        ALOGE("[%s,%d] invalid parameters pcProcessName(%s)\n", \
+              __FUNCTION__, __LINE__, pcProcessName);
+        return -1;
+    }
+
+    pcDirectory = opendir("/proc");
+    if (NULL == pcDirectory)
+    {
+        ALOGE("[%s,%d] open proc dir(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, pcDirectory);
+        return -1;
+    }
+
+    while(NULL == (sDirectoryEntry = readdir(pcDirectory)))
+    {
+        nId = atoi(sDirectoryEntry->d_name);
+        if (0 != nId)
+        {
+            sprintf(szFileName, "/proc/%d/cmdline", nId);
+            pcFileDes = fopen(szFileName, "r");
+            if (pcFileDes)
+            {
+                fgets(szCmdLine, sizeof(szCmdLine), pcFileDes);
+                fclose(pcFileDes);
+
+                if (strcmp(pcProcessName, szCmdLine) == 0)
                 {
-                    pid = id;
+                    nTargetPid = nId;
                     break;
                 }
             }
         }
     }
 
-    closedir(dir);
-    return pid;
+    closedir(pcDirectory);
+    return nTargetPid;
 }
 
 int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_addr, long * parameters, int param_num, struct pt_regs * regs)
@@ -186,17 +226,17 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
     alParams[4] = 0;
     alParams[5] = 0;
-    pvMmapAddr = get_remote_addr(nTargetPid, pcLibcPath, (void *)mmap);
+    pvMmapAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLibcPath, (void *)mmap);
 
     if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
         goto exit;
 
     pnMapBase = ptrace_retval(&sTempRegs);
 
-    pvDlopenAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlopen);
-    pvDlsymAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlsym);
-    pvDlcloseAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlclose);
-    pvDlerrorAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlerror);
+    pvDlopenAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLinkerPath, (void *)dlopen);
+    pvDlsymAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLinkerPath, (void *)dlsym);
+    pvDlcloseAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLinkerPath, (void *)dlclose);
+    pvDlerrorAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLinkerPath, (void *)dlerror);
 
     ptrace_writedata(nTargetPid, pnMapBase, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
@@ -208,7 +248,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
 
     void * pvLibHandle = ptrace_retval(&sTempRegs);
 
-#define FUNCTION_NAME_ADDR_OFFSET       0x100
+#define FUNCTION_NAME_ADDR_OFFSET       (0x100)
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_NAME_ADDR_OFFSET, "hook_entry", strlen("hook_entry") + 1);
     alParams[0] = pvLibHandle;
     alParams[1] = pnMapBase + FUNCTION_NAME_ADDR_OFFSET;
@@ -227,23 +267,23 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     ALOGI("[%s,%d] enter to entry addr(0x%lx)\n", \
           __FUNCTION__, __LINE__, pvHookEntryAddr);
 
-#define FUNCTION_FUNC_LIB_OFFSET      0x200
+#define FUNCTION_FUNC_LIB_OFFSET      (0x200)
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_FUNC_LIB_OFFSET, pcFuncLib, strlen(pcFuncLib) + 1);
     alParams[0] = pnMapBase + FUNCTION_FUNC_LIB_OFFSET;
 
-#define FUNCTION_SRC_LIB_OFFSET      0x300
+#define FUNCTION_SRC_LIB_OFFSET      (0x300)
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_SRC_LIB_OFFSET, pcSrcLib, strlen(pcSrcLib) + 1);
     alParams[1] = pnMapBase + FUNCTION_SRC_LIB_OFFSET;
 
-#define FUNCTION_DST_LIB_OFFSET      0x400
+#define FUNCTION_DST_LIB_OFFSET      (0x400)
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_DST_LIB_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
     alParams[2] = pnMapBase + FUNCTION_DST_LIB_OFFSET;
 
-#define FUNCTION_SRC_FUNC_OFFSET      0x500
+#define FUNCTION_SRC_FUNC_OFFSET      (0x500)
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_SRC_FUNC_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
     alParams[3] = pnMapBase + FUNCTION_SRC_FUNC_OFFSET;
 
-#define FUNCTION_DST_FUNC_OFFSET      0x600
+#define FUNCTION_DST_FUNC_OFFSET      (0x600)
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_DST_FUNC_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
     alParams[4] = pnMapBase + FUNCTION_DST_FUNC_OFFSET;
 
@@ -301,7 +341,7 @@ int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char 
         goto exit;
     }
 
-    ulRemoteAddr = get_remote_addr(nTargetPid, pcSrcLib, pvLocalAddr);
+    ulRemoteAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcSrcLib, pvLocalAddr);
     acBuf[0] = (ulRemoteAddr&0xFF);
     acBuf[1] = (ulRemoteAddr&0xFF00) >> 8;
     acBuf[2] = (ulRemoteAddr&0xFF0000) >> 16;
@@ -349,7 +389,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     }
     memcpy(&sOrinRegs, &sTempRegs, sizeof(sTempRegs));
 
-    pvMmapAddr = get_remote_addr(nTargetPid, pcLibcPath, (void *)mmap);
+    pvMmapAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLibcPath, (void *)mmap);
 
     alParams[0] = 0;
     alParams[1] = 0x4000;
@@ -363,7 +403,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 
     pnMapBase = ptrace_retval(&sTempRegs);
 
-    pvDlopenAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlopen );
+    pvDlopenAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLinkerPath, (void *)dlopen );
 
     ptrace_writedata(nTargetPid, pnMapBase, pcSrcLib, strlen(pcSrcLib) + 1);
 
@@ -431,7 +471,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        nTargetPid = find_pid_of("/system/bin/surfaceflinger");
+        nTargetPid = MZ_FindPidOfProcess("/system/bin/surfaceflinger");
         nRet = MZHOOK_InjectProToRemote(nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
         if (0 != nRet)
         {
