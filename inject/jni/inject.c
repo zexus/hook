@@ -83,8 +83,6 @@ void* get_remote_addr(pid_t target_pid, const char* module_name, void* local_add
     local_handle = get_module_base(-1, module_name);
     remote_handle = get_module_base(target_pid, module_name);
 
-    ALOGI("[+] get_remote_addr: local[%x], remote[%x]\n", local_handle, remote_handle);
-
     void * ret_addr = (void *)((uint32_t)local_addr + (uint32_t)remote_handle - (uint32_t)local_handle);
 
     return ret_addr;
@@ -132,7 +130,6 @@ int find_pid_of(const char *process_name)
 
 int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_addr, long * parameters, int param_num, struct pt_regs * regs)
 {
-    ALOGI("[+] Calling %s in target process.\n", func_name);
     if (ptrace_call(target_pid, (uint32_t)func_addr, parameters, param_num, regs) == -1)
         return -1;
 
@@ -144,7 +141,7 @@ int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_ad
     return 0;
 }
 
-int inject_remote_process(pid_t target_pid, const char *library_path, const char *function_name, const char *param, size_t param_size)
+int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
 {
     int ret = -1;
     void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
@@ -184,10 +181,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     dlclose_addr = get_remote_addr( target_pid, linker_path, (void *)dlclose );
     dlerror_addr = get_remote_addr( target_pid, linker_path, (void *)dlerror );
 
-    ALOGI("[+] Get imports: dlopen: %x, dlsym: %x, dlclose: %x, dlerror: %x\n",
-            dlopen_addr, dlsym_addr, dlclose_addr, dlerror_addr);
-
-    ptrace_writedata(target_pid, map_base, library_path, strlen(library_path) + 1);
+    ptrace_writedata(target_pid, map_base, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
     parameters[0] = map_base;
     parameters[1] = RTLD_NOW | RTLD_GLOBAL;
@@ -198,7 +192,7 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     void * sohandle = ptrace_retval(&regs);
 
 #define FUNCTION_NAME_ADDR_OFFSET       0x100
-    ptrace_writedata(target_pid, map_base + FUNCTION_NAME_ADDR_OFFSET, function_name, strlen(function_name) + 1);
+    ptrace_writedata(target_pid, map_base + FUNCTION_NAME_ADDR_OFFSET, "hook_entry", strlen("hook_entry") + 1);
     parameters[0] = sohandle;
     parameters[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
 
@@ -209,10 +203,22 @@ int inject_remote_process(pid_t target_pid, const char *library_path, const char
     ALOGI("[+] hook_entry_addr = %p\n", hook_entry_addr);
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, param, strlen(param) + 1);
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcFuncLib, strlen(pcFuncLib) + 1);
     parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 1, &regs) == -1)
+#define FUNCTION_PARAM_ADDR_OFFSET      0x300
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
+    parameters[1] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+
+#define FUNCTION_PARAM_ADDR_OFFSET      0x400
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
+    parameters[2] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+
+#define FUNCTION_PARAM_ADDR_OFFSET      0x500
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
+    parameters[3] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+
+    if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 4, &regs) == -1)
         goto exit;
 
     //printf("Press enter to dlclose and detach\n");
@@ -394,9 +400,10 @@ int main(int argc, char** argv)
     pid_t nTargetPid;
 
     char * pcSrcLib = "/system/lib/libhook_test.so";
-    char * pcDstLib = "/system/lib/libhook.so";
-    char * pcSrcFunc = "New_Hook_Entry_Test";
-    char * pcDstFunc = "Hook_Entry_Test";
+    char * pcDstLib = "/system/lib/libEGL.so";
+    char * pcFuncLib = "/system/lib/libsurfaceflinger.so";
+    char * pcSrcFunc = "new_eglSwapBuffers";
+    char * pcDstFunc = "eglSwapBuffers";
 
     if (NULL == pcDstLib)
     {
@@ -439,7 +446,7 @@ int main(int argc, char** argv)
     else
     {
         nTargetPid = find_pid_of("/system/bin/surfaceflinger");
-        nRet = inject_remote_process(nTargetPid, pcDstLib, "hook_entry",  "/system/lib/libsurfaceflinger.so", strlen("/system/lib/libsurfaceflinger.so"));
+        nRet = MZHOOK_InjectProToRemote(nTargetPid, pcDstLib, pcFuncLib, pcSrcFunc, pcDstFunc);
         if (0 != nRet)
         {
             ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \

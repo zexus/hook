@@ -164,9 +164,13 @@ exit:
     return nRet;
 }
 
-int hook_entry(char * pcTargetLib){
-    DEBUG_PRINT("[+] Start hooking %s\n", pcTargetLib);
+int hook_entry(char * pcFuncLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc)
+{
+    //D/HOOK    (12636): [+] Start hooking /system/lib/libEGL.so
+    //D/HOOK    (12636): [+] Start hooking /system/lib/libsurfaceflinger.so
+    //D/HOOK    (12636): [+] Start hooking new_eglSwapBuffers
+    //D/HOOK    (12636): [+] Start hooking eglSwapBuffers
     old_eglSwapBuffers = eglSwapBuffers;
-    hook_eglSwapBuffers(pcTargetLib);
+    hook_eglSwapBuffers(pcFuncLib);
     return 0;
 }
