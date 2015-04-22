@@ -140,101 +140,113 @@ int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_ad
     return 0;
 }
 
-int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const char * pcSrcLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
+int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const char * pcSrcLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
 {
-    int ret = -1;
-    void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
-    uint8_t *map_base = 0;
+    int nRet = -1;
+    void * pvMmapAddr = NULL;
+    void * pvDlopenAddr = NULL;
+    void * pvDlsymAddr = NULL;
+    void * pvDlcloseAddr = NULL;
+    void * pvDlerrorAddr = NULL;
+    uint8_t * pnMapBase = NULL;
+    struct pt_regs sTempRegs, sOrinRegs;
 
-    struct pt_regs regs, original_regs;
+    if (0 > nTargetPid || NULL == pcFuncLib || NULL == pcSrcLib
+        || NULL == pcDstLib || NULL == pcSrcFunc || NULL == pcDstFunc)
+    {
+        ALOGE("[%s,%d] Invalid Parameters: nTargetPid(%d) pcFuncLib(%s) pcSrcLib(%s) \
+              pcDstLib(%s) pcSrcFunc(%s) pcDstFunc(%s)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
+        goto exit;
+    }
 
-    long parameters[10];
+    long alParams[10];
 
-    ALOGI("[+] Injecting process: %d\n", target_pid);
+    ALOGI("[%s,%d] Injecting process: nTargetPid(%d)\n", \
+          __FUNCTION__, __LINE__, nTargetPid);
 
-    if (ptrace_attach(target_pid) == -1)
+    if (ptrace_attach(nTargetPid) == -1)
         goto exit;
 
-    if (ptrace_getregs(target_pid, &regs) == -1)
+    if (ptrace_getregs(nTargetPid, &sTempRegs) == -1)
         goto exit;
 
-    memcpy(&original_regs, &regs, sizeof(regs));
+    memcpy(&sOrinRegs, &sTempRegs, sizeof(sTempRegs));
 
-    mmap_addr = get_remote_addr(target_pid, libc_path, (void *)mmap);
-    ALOGI("[+] Remote mmap address: %x\n", mmap_addr);
+    pvMmapAddr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
 
-    parameters[0] = 0;
-    parameters[1] = 0x4000;
-    parameters[2] = PROT_READ | PROT_WRITE | PROT_EXEC;
-    parameters[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
-    parameters[4] = 0;
-    parameters[5] = 0;
+    alParams[0] = 0;
+    alParams[1] = 0x4000;
+    alParams[2] = PROT_READ | PROT_WRITE | PROT_EXEC;
+    alParams[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
+    alParams[4] = 0;
+    alParams[5] = 0;
 
-    if (ptrace_call_wrapper(target_pid, "mmap", mmap_addr, parameters, 6, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
         goto exit;
 
-    map_base = ptrace_retval(&regs);
+    pnMapBase = ptrace_retval(&sTempRegs);
 
-    dlopen_addr = get_remote_addr(target_pid, linker_path, (void *)dlopen);
-    dlsym_addr = get_remote_addr(target_pid, linker_path, (void *)dlsym);
-    dlclose_addr = get_remote_addr(target_pid, linker_path, (void *)dlclose);
-    dlerror_addr = get_remote_addr(target_pid, linker_path, (void *)dlerror);
+    pvDlopenAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlopen);
+    pvDlsymAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlsym);
+    pvDlcloseAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlclose);
+    pvDlerrorAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlerror);
 
-    ptrace_writedata(target_pid, map_base, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
+    ptrace_writedata(nTargetPid, pnMapBase, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
-    parameters[0] = map_base;
-    parameters[1] = RTLD_NOW | RTLD_GLOBAL;
+    alParams[0] = pnMapBase;
+    alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(target_pid, "dlopen", dlopen_addr, parameters, 2, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs) == -1)
         goto exit;
 
-    void * sohandle = ptrace_retval(&regs);
+    void * sohandle = ptrace_retval(&sTempRegs);
 
 #define FUNCTION_NAME_ADDR_OFFSET       0x100
-    ptrace_writedata(target_pid, map_base + FUNCTION_NAME_ADDR_OFFSET, "hook_entry", strlen("hook_entry") + 1);
-    parameters[0] = sohandle;
-    parameters[1] = map_base + FUNCTION_NAME_ADDR_OFFSET;
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_NAME_ADDR_OFFSET, "hook_entry", strlen("hook_entry") + 1);
+    alParams[0] = sohandle;
+    alParams[1] = pnMapBase + FUNCTION_NAME_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(target_pid, "dlsym", dlsym_addr, parameters, 2, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "dlsym", pvDlsymAddr, alParams, 2, &sTempRegs) == -1)
         goto exit;
 
-    void * hook_entry_addr = ptrace_retval(&regs);
+    void * hook_entry_addr = ptrace_retval(&sTempRegs);
     ALOGI("[+] hook_entry_addr = %p\n", hook_entry_addr);
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x200
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcFuncLib, strlen(pcFuncLib) + 1);
-    parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcFuncLib, strlen(pcFuncLib) + 1);
+    alParams[0] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x300
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcSrcLib, strlen(pcSrcLib) + 1);
-    parameters[1] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcSrcLib, strlen(pcSrcLib) + 1);
+    alParams[1] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x400
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
-    parameters[2] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
+    alParams[2] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x500
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
-    parameters[3] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
+    alParams[3] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x600
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
-    parameters[4] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+    ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_PARAM_ADDR_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
+    alParams[4] = pnMapBase + FUNCTION_PARAM_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 5, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "hook_entry", hook_entry_addr, alParams, 5, &sTempRegs) == -1)
         goto exit;
 
-    parameters[0] = sohandle;
+    alParams[0] = sohandle;
 
-    if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "dlclose", dlclose, alParams, 1, &sTempRegs) == -1)
         goto exit;
 
-    ptrace_setregs(target_pid, &original_regs);
-    ptrace_detach(target_pid);
-    ret = 0;
+    ptrace_setregs(nTargetPid, &sOrinRegs);
+    ptrace_detach(nTargetPid);
+    nRet = 0;
 
 exit:
-    return ret;
+    return nRet;
 }
 
 int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char * pcSrcFunc, const char * pcDstFunc)
@@ -293,8 +305,8 @@ exit:
 int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 {
     int nRet = -1;
-    void *mmap_addr, *dlopen_addr;
-    uint8_t *map_base = 0;
+    void *pvMmapAddr, *pvDlopenAddr;
+    uint8_t * pnMapBase = NULL;
 
     struct pt_regs regs, original_regs;
 
@@ -315,8 +327,8 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 
     memcpy(&original_regs, &regs, sizeof(regs));
 
-    mmap_addr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
-    ALOGI("[+] Remote mmap address: %x\n", mmap_addr);
+    pvMmapAddr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
+    ALOGI("[+] Remote mmap address: %x\n", pvMmapAddr);
 
     alParams[0] = 0;
     alParams[1] = 0x4000;
@@ -325,21 +337,21 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     alParams[4] = 0;
     alParams[5] = 0;
 
-    if (ptrace_call_wrapper(nTargetPid, "mmap", mmap_addr, alParams, 6, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &regs) == -1)
         goto exit;
 
-    map_base = ptrace_retval(&regs);
+    pnMapBase = ptrace_retval(&regs);
 
-    dlopen_addr = get_remote_addr(nTargetPid, linker_path, (void *)dlopen );
+    pvDlopenAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlopen );
 
-    ALOGI("[+] Get imports: dlopen: %x\n", dlopen_addr);
+    ALOGI("[+] Get imports: dlopen: %x\n", pvDlopenAddr);
 
-    ptrace_writedata(nTargetPid, map_base, pcSrcLib, strlen(pcSrcLib) + 1);
+    ptrace_writedata(nTargetPid, pnMapBase, pcSrcLib, strlen(pcSrcLib) + 1);
 
-    alParams[0] = map_base;
+    alParams[0] = pnMapBase;
     alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlopen", dlopen_addr, alParams, 2, &regs) == -1)
+    if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &regs) == -1)
         goto exit;
 
     void * sohandle = ptrace_retval(&regs);

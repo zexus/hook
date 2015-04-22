@@ -163,7 +163,7 @@ int MZHOOK_MainEntry(char * pcTargetLib)
         }
     }
 
-    return nRet;
+    nRet = 0;
 
 exit:
     if (string_table) {
@@ -207,9 +207,6 @@ int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcF
 {
     int nRet = -1;
     void * pvSymbolAddr = NULL;
-
-    pcSrcLib = "/system/lib/libhook_test.so";
-    pcSrcFunc = "s_fnOnNewFunctionAddress";
 
     pvSymbolAddr = MZHOOK_InjectLibToLocal(pcDstLib, pcDstFunc);
     if (NULL == pvSymbolAddr)
