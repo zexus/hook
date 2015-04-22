@@ -11,20 +11,31 @@
 #define ENABLE_DEBUG 1
 
 #if ENABLE_DEBUG
-#define LOG_TAG "HOOK"
-#define LOGD(fmt, args...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, fmt, ##args)
-#define DEBUG_PRINT(format,args...) LOGD(format, ##args)
+    #define TAG "INJECT"
+    #define ALOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
+    #define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
+    #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+    #define ALOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
+    #define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+    #define ALOGF(...) __android_log_print(ANDROID_LOG_FATAL, TAG, __VA_ARGS__)
+    #define ASTDERR(...)
 #else
-#define DEBUG_PRINT(format,args...)
+    #define ALOGV(...)
+    #define ALOGD(...)
+    #define ALOGI(...)
+    #define ALOGW(...)
+    #define ALOGE(...)
+    #define ALOGF(...)
+    #define ASTDERR(...)
 #endif
 
 EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surf) = -1;
 
 EGLBoolean new_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 {
-    DEBUG_PRINT("New eglSwapBuffers\n");
+    ALOGI("New eglSwapBuffers\n");
     if (old_eglSwapBuffers == -1)
-        DEBUG_PRINT("error\n");
+        ALOGE("error\n");
     return old_eglSwapBuffers(dpy, surface);
 }
 
@@ -71,12 +82,12 @@ int MZHOOK_MainEntry(char * pcTargetLib)
 
     nFd = open(pcTargetLib, O_RDONLY);
     if (-1 == nFd) {
-        DEBUG_PRINT("[+] Open taget library error\n");
+        ALOGE("[+] Open taget library error\n");
         goto exit;
     }
 
     void * base_addr = get_module_base(getpid(), pcTargetLib);
-    DEBUG_PRINT("[+] Target Library address = %p\n", base_addr);
+    ALOGI("[+] Target Library address = %p\n", base_addr);
 
     Elf32_Ehdr ehdr;
     read(nFd, &ehdr, sizeof(Elf32_Ehdr));
@@ -125,12 +136,12 @@ int MZHOOK_MainEntry(char * pcTargetLib)
             if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0) {
                 out_addr = base_addr + shdr.sh_addr;
                 out_size = shdr.sh_size;
-                DEBUG_PRINT("[+] Got section start_addr = %lx, section_size = %lx\n", out_addr, out_size);
+                ALOGI("[+] Got section start_addr = %lx, section_size = %lx\n", out_addr, out_size);
 
                 for (i = 0; i < out_size; i += 4) {
                     got_item = *(uint32_t *)(out_addr + i);
                     if (got_item  == old_eglSwapBuffers) {
-                        DEBUG_PRINT("[+] Found eglSwapBuffers in got section\n");
+                        ALOGI("[+] Found eglSwapBuffers in got section\n");
                         got_found = 1;
 
                         uint32_t page_size = getpagesize();
@@ -140,7 +151,7 @@ int MZHOOK_MainEntry(char * pcTargetLib)
 
                         break;
                     } else if (got_item == new_eglSwapBuffers) {
-                        DEBUG_PRINT("Already hooked\n");
+                        ALOGI("Already hooked\n");
                         break;
                     }
                 }
@@ -166,11 +177,11 @@ exit:
 
 int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc)
 {
-    DEBUG_PRINT("pcFuncLib++++++++++++%s\n", pcFuncLib);
-    DEBUG_PRINT("pcSrcLib++++++++++++%s\n", pcSrcLib);
-    DEBUG_PRINT("pcDstLib++++++++++++%s\n", pcDstLib);
-    DEBUG_PRINT("pcSrcFunc++++++++++++%s\n", pcSrcFunc);
-    DEBUG_PRINT("pcDstFunc++++++++++++%s\n", pcDstFunc);
+    ALOGI("pcFuncLib++++++++++++%s\n", pcFuncLib);
+    ALOGI("pcSrcLib++++++++++++%s\n", pcSrcLib);
+    ALOGI("pcDstLib++++++++++++%s\n", pcDstLib);
+    ALOGI("pcSrcFunc++++++++++++%s\n", pcSrcFunc);
+    ALOGI("pcDstFunc++++++++++++%s\n", pcDstFunc);
     old_eglSwapBuffers = eglSwapBuffers;
     MZHOOK_MainEntry(pcFuncLib);
     return 0;
