@@ -30,14 +30,14 @@
     #define ASTDERR(...)
 #endif
 
-EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surf) = -1;
+EGLBoolean (*s_fnOnEldFunctionAddress)(EGLDisplay dpy, EGLSurface surf) = -1;
 
-EGLBoolean new_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
+EGLBoolean s_fnOnNewFunctionAddress(EGLDisplay dpy, EGLSurface surface)
 {
     ALOGI("New eglSwapBuffers\n");
-    if (old_eglSwapBuffers == -1)
+    if (s_fnOnEldFunctionAddress == -1)
         ALOGE("error\n");
-    return old_eglSwapBuffers(dpy, surface);
+    return s_fnOnEldFunctionAddress(dpy, surface);
 }
 
 void* get_module_base(pid_t pid, const char* module_name)
@@ -139,21 +139,20 @@ int MZHOOK_MainEntry(char * pcTargetLib)
             if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0) {
                 out_addr = base_addr + shdr.sh_addr;
                 out_size = shdr.sh_size;
-                ALOGI("[+] Got section start_addr = %lx, section_size = %lx\n", out_addr, out_size);
 
                 for (i = 0; i < out_size; i += 4) {
                     got_item = *(uint32_t *)(out_addr + i);
-                    if (got_item  == old_eglSwapBuffers) {
-                        ALOGI("[+] Found eglSwapBuffers in got section\n");
+                    if (got_item  == s_fnOnEldFunctionAddress) {
+                        ALOGI("[+] Found s_fnOnEldFunctionAddress in got section\n");
                         got_found = 1;
 
                         uint32_t page_size = getpagesize();
                         uint32_t entry_page_start = (out_addr + i) & (~(page_size - 1));
                         mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);
-                        *(uint32_t *)(out_addr + i) = new_eglSwapBuffers;
+                        *(uint32_t *)(out_addr + i) = s_fnOnNewFunctionAddress;
 
                         break;
-                    } else if (got_item == new_eglSwapBuffers) {
+                    } else if (got_item == s_fnOnNewFunctionAddress) {
                         ALOGI("Already hooked\n");
                         break;
                     }
@@ -210,7 +209,7 @@ int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcF
     void * pvSymbolAddr = NULL;
 
     pcSrcLib = "/system/lib/libhook_test.so";
-    pcSrcFunc = "new_eglSwapBuffers";
+    pcSrcFunc = "s_fnOnNewFunctionAddress";
 
     pvSymbolAddr = MZHOOK_InjectLibToLocal(pcDstLib, pcDstFunc);
     if (NULL == pvSymbolAddr)
@@ -219,7 +218,7 @@ int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcF
               __FUNCTION__, __LINE__, pcDstLib, pcDstFunc);
         goto exit;
     }
-    old_eglSwapBuffers = pvSymbolAddr;
+    s_fnOnEldFunctionAddress = pvSymbolAddr;
 
     //pvSymbolAddr = MZHOOK_InjectLibToLocal(pcSrcLib, pcSrcFunc);
     //if (NULL == pvSymbolAddr)
@@ -228,7 +227,7 @@ int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcF
     //          __FUNCTION__, __LINE__, pcSrcLib, pcSrcFunc);
     //    goto exit;
     //}
-    //new_eglSwapBuffers = pvSymbolAddr;
+    //s_fnOnNewFunctionAddress = pvSymbolAddr;
 
     nRet = MZHOOK_MainEntry(pcFuncLib);
     if (0 != nRet)
