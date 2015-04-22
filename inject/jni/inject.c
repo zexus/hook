@@ -142,7 +142,7 @@ int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_ad
     return 0;
 }
 
-int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
+int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const char * pcSrcLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
 {
     int ret = -1;
     void *mmap_addr, *dlopen_addr, *dlsym_addr, *dlclose_addr, *dlerror_addr;
@@ -177,10 +177,10 @@ int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const cha
 
     map_base = ptrace_retval(&regs);
 
-    dlopen_addr = get_remote_addr( target_pid, linker_path, (void *)dlopen );
-    dlsym_addr = get_remote_addr( target_pid, linker_path, (void *)dlsym );
-    dlclose_addr = get_remote_addr( target_pid, linker_path, (void *)dlclose );
-    dlerror_addr = get_remote_addr( target_pid, linker_path, (void *)dlerror );
+    dlopen_addr = get_remote_addr(target_pid, linker_path, (void *)dlopen);
+    dlsym_addr = get_remote_addr(target_pid, linker_path, (void *)dlsym);
+    dlclose_addr = get_remote_addr(target_pid, linker_path, (void *)dlclose);
+    dlerror_addr = get_remote_addr(target_pid, linker_path, (void *)dlerror);
 
     ptrace_writedata(target_pid, map_base, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
@@ -208,18 +208,22 @@ int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const cha
     parameters[0] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x300
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcSrcLib, strlen(pcSrcLib) + 1);
     parameters[1] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x400
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstLib, strlen(pcDstLib) + 1);
     parameters[2] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
 #define FUNCTION_PARAM_ADDR_OFFSET      0x500
-    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcSrcFunc, strlen(pcSrcFunc) + 1);
     parameters[3] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 4, &regs) == -1)
+#define FUNCTION_PARAM_ADDR_OFFSET      0x600
+    ptrace_writedata(target_pid, map_base + FUNCTION_PARAM_ADDR_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
+    parameters[4] = map_base + FUNCTION_PARAM_ADDR_OFFSET;
+
+    if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 5, &regs) == -1)
         goto exit;
 
     parameters[0] = sohandle;
@@ -399,7 +403,7 @@ int main(int argc, char** argv)
     else
     {
         nTargetPid = find_pid_of("/system/bin/surfaceflinger");
-        nRet = MZHOOK_InjectProToRemote(nTargetPid, pcDstLib, pcFuncLib, pcSrcFunc, pcDstFunc);
+        nRet = MZHOOK_InjectProToRemote(nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
         if (0 != nRet)
         {
             ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \

@@ -164,12 +164,13 @@ exit:
     return nRet;
 }
 
-int hook_entry(char * pcFuncLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc)
+int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc)
 {
-    //D/HOOK    (12636): [+] Start hooking /system/lib/libEGL.so
-    //D/HOOK    (12636): [+] Start hooking /system/lib/libsurfaceflinger.so
-    //D/HOOK    (12636): [+] Start hooking new_eglSwapBuffers
-    //D/HOOK    (12636): [+] Start hooking eglSwapBuffers
+    DEBUG_PRINT("pcFuncLib++++++++++++%s\n", pcFuncLib);
+    DEBUG_PRINT("pcSrcLib++++++++++++%s\n", pcSrcLib);
+    DEBUG_PRINT("pcDstLib++++++++++++%s\n", pcDstLib);
+    DEBUG_PRINT("pcSrcFunc++++++++++++%s\n", pcSrcFunc);
+    DEBUG_PRINT("pcDstFunc++++++++++++%s\n", pcDstFunc);
     old_eglSwapBuffers = eglSwapBuffers;
     MZHOOK_MainEntry(pcFuncLib);
     return 0;
