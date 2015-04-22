@@ -106,7 +106,8 @@ int find_pid_of(const char *process_name)
     if (dir == NULL)
         return -1;
 
-    while((entry = readdir(dir)) != NULL) {
+    while((entry = readdir(dir)) != NULL)
+    {
         id = atoi(entry->d_name);
         if (id != 0) {
             sprintf(filename, "/proc/%d/cmdline", id);
@@ -115,8 +116,8 @@ int find_pid_of(const char *process_name)
                 fgets(cmdline, sizeof(cmdline), fp);
                 fclose(fp);
 
-                if (strcmp(process_name, cmdline) == 0) {
-                    /* process found */
+                if (strcmp(process_name, cmdline) == 0)
+                {
                     pid = id;
                     break;
                 }
@@ -221,8 +222,6 @@ int MZHOOK_InjectProToRemote(pid_t target_pid, const char * pcFuncLib, const cha
     if (ptrace_call_wrapper(target_pid, "hook_entry", hook_entry_addr, parameters, 4, &regs) == -1)
         goto exit;
 
-    //printf("Press enter to dlclose and detach\n");
-    //getchar();
     parameters[0] = sohandle;
 
     if (ptrace_call_wrapper(target_pid, "dlclose", dlclose, parameters, 1, &regs) == -1)
@@ -356,44 +355,6 @@ exit:
     return nRet;
 }
 
-int MZHOOK_ModifyGotAddr(int nTargetPid, char * pcDstFunc)
-{
-    int nRet = -1;
-    unsigned long ulDstAddr, ulDstEntry;
-    struct pt_regs sTempRegs, sOrinRegs;
-
-    if (ptrace_attach(nTargetPid) == -1)
-    {
-        ALOGE("[%s,%d] attach pid(%d) failed\n", \
-              __FUNCTION__, __LINE__, nTargetPid);
-        goto exit;
-    }
-
-    if (ptrace_getregs(nTargetPid, &sTempRegs) == -1)
-    {
-        ALOGE("[%s,%d] failed to get pid(%d) registers value\n", \
-              __FUNCTION__, __LINE__, nTargetPid);
-        goto exit;
-    }
-
-    memcpy(&sOrinRegs, &sTempRegs, sizeof(sTempRegs));
-
-    nRet = find_func_by_got(nTargetPid, pcDstFunc, &ulDstAddr, &ulDstEntry);
-    if (0 != nRet || NULL == ulDstAddr || NULL == ulDstEntry)
-    {
-        ALOGE("[%s,%d] failed nTargetPid(%d) pcDstFunc(0x%x)\n", \
-              __FUNCTION__, __LINE__, nTargetPid, pcDstFunc);
-        goto exit;
-    }
-
-    nRet = 0;
-
-exit:
-    ptrace_setregs(nTargetPid, &sOrinRegs);
-    ptrace_detach(nTargetPid);
-    return nRet;
-}
-
 int main(int argc, char** argv)
 {
     int nRet = -1;
@@ -434,14 +395,6 @@ int main(int argc, char** argv)
                   __FUNCTION__, __LINE__, pcSrcLib, getpid());
             return -1;
         }
-
-        //nRet = MZHOOK_ModifyGotAddr(nTargetPid, pcDstFunc);
-        //if (0 != nRet)
-        //{
-        //    ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
-        //          __FUNCTION__, __LINE__, pcSrcLib, getpid());
-        //    return -1;
-        //}
     }
     else
     {

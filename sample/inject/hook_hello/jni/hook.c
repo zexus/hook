@@ -64,7 +64,7 @@ void* get_module_base(pid_t pid, const char* module_name)
     return (void *)addr;
 }
 
-int hook_eglSwapBuffers(char * pcTargetLib)
+int MZHOOK_MainEntry(char * pcTargetLib)
 {
     int nRet = -1;
     int nFd = -1;
@@ -81,10 +81,10 @@ int hook_eglSwapBuffers(char * pcTargetLib)
     Elf32_Ehdr ehdr;
     read(nFd, &ehdr, sizeof(Elf32_Ehdr));
 
-    unsigned long shdr_addr = ehdr.e_shoff; // 节区头部表格相对文件开头的偏移量（按字节计算）
-    int shnum = ehdr.e_shnum;               // 节区头部表格的表项数目
-    int shent_size = ehdr.e_shentsize;      // 节区头部表格的表项大小
-    unsigned long stridx = ehdr.e_shstrndx; // 节区头部表格与节区名称字符串表相关的表项的索引
+    unsigned long shdr_addr = ehdr.e_shoff;
+    int shnum = ehdr.e_shnum;
+    int shent_size = ehdr.e_shentsize;
+    unsigned long stridx = ehdr.e_shstrndx;
 
     /*
      *节区头部数据结构描述
@@ -103,8 +103,8 @@ int hook_eglSwapBuffers(char * pcTargetLib)
      *}Elf32_Shdr
     */
 
-    Elf32_Shdr shdr;                        // 节区头部
-    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);   // 节区头部表格起始地址 + stridx * shent_size = .shstrtab（包含各节区名称）
+    Elf32_Shdr shdr;
+    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);
     read(nFd, &shdr, shent_size);
 
     char * string_table = (char *)malloc(shdr.sh_size);
@@ -120,7 +120,7 @@ int hook_eglSwapBuffers(char * pcTargetLib)
 
     for (i = 0; i < shnum; i++) {
         read(nFd, &shdr, shent_size);
-        if (shdr.sh_type == SHT_PROGBITS) { // SHT_PROGBITS：表明此节区包含程序定义的信息，其格式和含义都由程序解析
+        if (shdr.sh_type == SHT_PROGBITS) {
             int name_idx = shdr.sh_name;
             if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0) {
                 out_addr = base_addr + shdr.sh_addr;
@@ -133,9 +133,9 @@ int hook_eglSwapBuffers(char * pcTargetLib)
                         DEBUG_PRINT("[+] Found eglSwapBuffers in got section\n");
                         got_found = 1;
 
-                        uint32_t page_size = getpagesize();                                         // 获取分页大小
+                        uint32_t page_size = getpagesize();
                         uint32_t entry_page_start = (out_addr + i) & (~(page_size - 1));
-                        mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);  // 设置内存访问权限
+                        mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);
                         *(uint32_t *)(out_addr + i) = new_eglSwapBuffers;
 
                         break;
@@ -171,6 +171,6 @@ int hook_entry(char * pcFuncLib, char * pcDstLib, char * pcSrcFunc, char * pcDst
     //D/HOOK    (12636): [+] Start hooking new_eglSwapBuffers
     //D/HOOK    (12636): [+] Start hooking eglSwapBuffers
     old_eglSwapBuffers = eglSwapBuffers;
-    hook_eglSwapBuffers(pcFuncLib);
+    MZHOOK_MainEntry(pcFuncLib);
     return 0;
 }
