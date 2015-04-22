@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <dlfcn.h>
 #include <android/log.h>
 #include <EGL/egl.h>
 #include <GLES/gl.h>
@@ -47,10 +48,12 @@ void* get_module_base(pid_t pid, const char* module_name)
     char filename[32];
     char line[1024];
 
-    if (pid < 0) {
-        /* self process */
+    if (pid < 0)
+    {
         snprintf(filename, sizeof(filename), "/proc/self/maps");
-    } else {
+    }
+    else
+    {
         snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
     }
 
@@ -175,14 +178,66 @@ exit:
     return nRet;
 }
 
+void * MZHOOK_InjectLibToLocal(char * pcDstLib, char * pcDstFunc)
+{
+    int nRet = -1;
+    void * pvLocalHandle = NULL;
+    void * pvLocalAddr = NULL;
+
+    pvLocalHandle = dlopen(pcDstLib, RTLD_NOW | RTLD_GLOBAL);
+    if (NULL == pvLocalHandle)
+    {
+        ALOGE("[%s,%d] dlopen pcSrcLib(0x%x) failed\n", \
+              __FUNCTION__, __LINE__, pcDstLib);
+        goto exit;
+    }
+
+    pvLocalAddr = dlsym(pvLocalHandle, pcDstFunc);
+    if (NULL == pvLocalAddr)
+    {
+        ALOGE("[%s,%d] dlsym pcSrcFunc(0x%x) in local_handle(0x%x) failed\n", \
+              __FUNCTION__, __LINE__, pcDstFunc, pvLocalHandle);
+        goto exit;
+    }
+
+exit:
+    return pvLocalAddr;
+}
+
 int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc)
 {
-    ALOGI("pcFuncLib++++++++++++%s\n", pcFuncLib);
-    ALOGI("pcSrcLib++++++++++++%s\n", pcSrcLib);
-    ALOGI("pcDstLib++++++++++++%s\n", pcDstLib);
-    ALOGI("pcSrcFunc++++++++++++%s\n", pcSrcFunc);
-    ALOGI("pcDstFunc++++++++++++%s\n", pcDstFunc);
-    old_eglSwapBuffers = eglSwapBuffers;
-    MZHOOK_MainEntry(pcFuncLib);
-    return 0;
+    int nRet = -1;
+    void * pvSymbolAddr = NULL;
+
+    pcSrcLib = "/system/lib/libhook_test.so";
+    pcSrcFunc = "new_eglSwapBuffers";
+
+    pvSymbolAddr = MZHOOK_InjectLibToLocal(pcDstLib, pcDstFunc);
+    if (NULL == pvSymbolAddr)
+    {
+        ALOGE("[%s,%d] inject library pcDstLib(%s) to local pcDstFunc(%s) failed\n", \
+              __FUNCTION__, __LINE__, pcDstLib, pcDstFunc);
+        goto exit;
+    }
+    old_eglSwapBuffers = pvSymbolAddr;
+
+    //pvSymbolAddr = MZHOOK_InjectLibToLocal(pcSrcLib, pcSrcFunc);
+    //if (NULL == pvSymbolAddr)
+    //{
+    //    ALOGE("[%s,%d] inject library pcSrcLib(%s) to local pcSrcFunc(%s) failed\n", \
+    //          __FUNCTION__, __LINE__, pcSrcLib, pcSrcFunc);
+    //    goto exit;
+    //}
+    //new_eglSwapBuffers = pvSymbolAddr;
+
+    nRet = MZHOOK_MainEntry(pcFuncLib);
+    if (0 != nRet)
+    {
+        ALOGE("[%s,%d] inject library pcDstLib(%s) to local pcDstFunc(%s) failed\n", \
+              __FUNCTION__, __LINE__, pcDstLib, pcDstFunc);
+        goto exit;
+    }
+
+exit:
+    return nRet;
 }

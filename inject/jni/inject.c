@@ -137,8 +137,6 @@ int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_ad
     if (ptrace_getregs(target_pid, regs) == -1)
         return -1;
 
-    ALOGI("[+] Target process returned from %s, return value=%x, pc=%x \n", func_name, ptrace_retval(regs), ptrace_ip(regs));
-
     return 0;
 }
 
