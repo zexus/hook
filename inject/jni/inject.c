@@ -35,8 +35,8 @@
 
 #define CPSR_T_MASK     ( 1u << 5 )
 
-const char *libc_path = "/system/lib/libc.so";
-const char *linker_path = "/system/bin/linker";
+const char * pcLibcPath = "/system/lib/libc.so";
+const char * pcLinkerPath = "/system/bin/linker";
 
 extern int hook_entry(char *pcTargetLib);
 
@@ -82,7 +82,6 @@ void* get_remote_addr(pid_t target_pid, const char* module_name, void* local_add
 
     local_handle = get_module_base(-1, module_name);
     remote_handle = get_module_base(target_pid, module_name);
-
     void * ret_addr = (void *)((uint32_t)local_addr + (uint32_t)remote_handle - (uint32_t)local_handle);
 
     return ret_addr;
@@ -187,17 +186,17 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[3] =  MAP_ANONYMOUS | MAP_PRIVATE;
     alParams[4] = 0;
     alParams[5] = 0;
-    pvMmapAddr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
+    pvMmapAddr = get_remote_addr(nTargetPid, pcLibcPath, (void *)mmap);
 
     if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
         goto exit;
 
     pnMapBase = ptrace_retval(&sTempRegs);
 
-    pvDlopenAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlopen);
-    pvDlsymAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlsym);
-    pvDlcloseAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlclose);
-    pvDlerrorAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlerror);
+    pvDlopenAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlopen);
+    pvDlsymAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlsym);
+    pvDlcloseAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlclose);
+    pvDlerrorAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlerror);
 
     ptrace_writedata(nTargetPid, pnMapBase, "/system/lib/libhook.so", strlen("/system/lib/libhook.so") + 1);
 
@@ -303,7 +302,6 @@ int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char 
     }
 
     ulRemoteAddr = get_remote_addr(nTargetPid, pcSrcLib, pvLocalAddr);
-
     acBuf[0] = (ulRemoteAddr&0xFF);
     acBuf[1] = (ulRemoteAddr&0xFF00) >> 8;
     acBuf[2] = (ulRemoteAddr&0xFF0000) >> 16;
@@ -321,12 +319,11 @@ exit:
 int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 {
     int nRet = -1;
-    void *pvMmapAddr, *pvDlopenAddr;
-    uint8_t * pnMapBase = NULL;
-
-    struct pt_regs sTempRegs, sOrinRegs;
-
     long alParams[6];
+    void * pvMmapAddr = NULL;
+    void * pvDlopenAddr = NULL;
+    uint8_t * pnMapBase = NULL;
+    struct pt_regs sTempRegs, sOrinRegs;
 
     if (0 > nTargetPid || NULL == pcSrcLib)
     {
@@ -350,10 +347,9 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
               __FUNCTION__, __LINE__, nTargetPid);
         goto exit;
     }
-
     memcpy(&sOrinRegs, &sTempRegs, sizeof(sTempRegs));
 
-    pvMmapAddr = get_remote_addr(nTargetPid, libc_path, (void *)mmap);
+    pvMmapAddr = get_remote_addr(nTargetPid, pcLibcPath, (void *)mmap);
 
     alParams[0] = 0;
     alParams[1] = 0x4000;
@@ -367,7 +363,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 
     pnMapBase = ptrace_retval(&sTempRegs);
 
-    pvDlopenAddr = get_remote_addr(nTargetPid, linker_path, (void *)dlopen );
+    pvDlopenAddr = get_remote_addr(nTargetPid, pcLinkerPath, (void *)dlopen );
 
     ptrace_writedata(nTargetPid, pnMapBase, pcSrcLib, strlen(pcSrcLib) + 1);
 
