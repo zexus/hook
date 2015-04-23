@@ -105,8 +105,8 @@ int MZHOOK_MainEntry(char * pcTargetLib)
     read(nFd, &ehdr, sizeof(Elf32_Ehdr));
 
     unsigned long shdr_addr = ehdr.e_shoff;
-    int shnum = ehdr.e_shnum;
-    int shent_size = ehdr.e_shentsize;
+    int nShnum = ehdr.e_shnum;
+    int nShentSize = ehdr.e_shentsize;
     unsigned long stridx = ehdr.e_shstrndx;
 
     /*
@@ -127,8 +127,8 @@ int MZHOOK_MainEntry(char * pcTargetLib)
     */
 
     Elf32_Shdr shdr;
-    lseek(nFd, shdr_addr + stridx * shent_size, SEEK_SET);
-    read(nFd, &shdr, shent_size);
+    lseek(nFd, shdr_addr + stridx * nShentSize, SEEK_SET);
+    read(nFd, &shdr, nShentSize);
 
     char * string_table = (char *)malloc(shdr.sh_size);
     lseek(nFd, shdr.sh_offset, SEEK_SET);
@@ -141,9 +141,9 @@ int MZHOOK_MainEntry(char * pcTargetLib)
     uint32_t got_item = 0;
     int32_t got_found = 0;
 
-    for (i = 0; i < shnum; i++)
+    for (i = 0; i < nShnum; i++)
     {
-        read(nFd, &shdr, shent_size);
+        read(nFd, &shdr, nShentSize);
         if (shdr.sh_type == SHT_PROGBITS)
         {
             int name_idx = shdr.sh_name;
