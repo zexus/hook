@@ -471,20 +471,14 @@ exit:
     return nRet;
 }
 
-//char * pcFuncLib = "/system/lib/libEGL.so";
-//char * pcSrcLib = "/system/lib/libhook_egl.so";
-//char * pcDstLib = "/system/lib/libsurfaceflinger.so";
-//char * pcSrcFunc = "s_fnOnNewFunctionAddress";
-//char * pcDstFunc = "eglSwapBuffers";
 int MZHOOK_InjectLibToProcess(int nTargetPid, char * pcSrcLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc, char * pcFuncLib)
 {
     int nRet = -1;
 
-    if (0 < nTargetPid || NULL == pcFuncLib || NULL == pcSrcLib
+    if (0 > nTargetPid || NULL == pcFuncLib || NULL == pcSrcLib
         || NULL == pcDstLib || NULL == pcSrcFunc || NULL == pcDstFunc)
     {
-        ALOGE("[%s,%d] invalid parameters nTargetPid(%d) pcFuncLib(%s) pcSrcLib(%s) \
-              pcDstLib(%s) pcSrcFunc(0x%lx) pcDstFunc(0x%lx)\n", \
+        ALOGE("[%s,%d] invalid parameters nTargetPid(%d) pcFuncLib(%s) pcSrcLib(%s) pcDstLib(%s) pcSrcFunc(0x%lx) pcDstFunc(0x%lx)\n", \
               __FUNCTION__, __LINE__, nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
         return nRet;
     }
