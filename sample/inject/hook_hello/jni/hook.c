@@ -141,17 +141,22 @@ int MZHOOK_MainEntry(char * pcTargetLib)
     uint32_t got_item = 0;
     int32_t got_found = 0;
 
-    for (i = 0; i < shnum; i++) {
+    for (i = 0; i < shnum; i++)
+    {
         read(nFd, &shdr, shent_size);
-        if (shdr.sh_type == SHT_PROGBITS) {
+        if (shdr.sh_type == SHT_PROGBITS)
+        {
             int name_idx = shdr.sh_name;
-            if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0) {
+            if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0)
+            {
                 out_addr = pvBaseAddr + shdr.sh_addr;
                 out_size = shdr.sh_size;
 
-                for (i = 0; i < out_size; i += 4) {
+                for (i = 0; i < out_size; i += 4)
+                {
                     got_item = *(uint32_t *)(out_addr + i);
-                    if (got_item  == s_fnOnEldFunctionAddress) {
+                    if (got_item  == s_fnOnEldFunctionAddress)
+                    {
                         ALOGI("[+] Found s_fnOnEldFunctionAddress in got section\n");
                         got_found = 1;
 
@@ -161,7 +166,9 @@ int MZHOOK_MainEntry(char * pcTargetLib)
                         *(uint32_t *)(out_addr + i) = s_fnOnNewFunctionAddress;
 
                         break;
-                    } else if (got_item == s_fnOnNewFunctionAddress) {
+                    }
+                    else if (got_item == s_fnOnNewFunctionAddress)
+                    {
                         ALOGI("Already hooked\n");
                         break;
                     }
@@ -175,11 +182,13 @@ int MZHOOK_MainEntry(char * pcTargetLib)
     nRet = 0;
 
 exit:
-    if (string_table) {
+    if (string_table)
+    {
         free(string_table);
     }
 
-    if (nFd > 0) {
+    if (nFd > 0)
+    {
         close(nFd);
     }
 
