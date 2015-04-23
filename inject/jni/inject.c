@@ -265,8 +265,13 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[0] = pnMapBase;
     alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs) == -1)
+    nRet = ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvDlopenAddr(0x%lx) alParams(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pvDlopenAddr, alParams);
         goto exit;
+    }
 
     void * pvLibHandle = ptrace_retval(&sTempRegs);
 
@@ -275,8 +280,13 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[0] = pvLibHandle;
     alParams[1] = pnMapBase + FUNCTION_NAME_ADDR_OFFSET;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlsym", pvDlsymAddr, alParams, 2, &sTempRegs) == -1)
+    nRet = ptrace_call_wrapper(nTargetPid, "dlsym", pvDlsymAddr, alParams, 2, &sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvDlsymAddr(0x%lx) alParams(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pvDlsymAddr, alParams);
         goto exit;
+    }
 
     void * pvHookEntryAddr = ptrace_retval(&sTempRegs);
     if (NULL ==  pvHookEntryAddr)
@@ -309,13 +319,23 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_DST_FUNC_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
     alParams[4] = pnMapBase + FUNCTION_DST_FUNC_OFFSET;
 
-    if (ptrace_call_wrapper(nTargetPid, "hook_entry", pvHookEntryAddr, alParams, 5, &sTempRegs) == -1)
+    nRet = ptrace_call_wrapper(nTargetPid, "hook_entry", pvHookEntryAddr, alParams, 5, &sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvHookEntryAddr(0x%lx) alParams(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pvHookEntryAddr, alParams);
         goto exit;
+    }
 
     alParams[0] = pvLibHandle;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlclose", dlclose, alParams, 1, &sTempRegs) == -1)
+    nRet = ptrace_call_wrapper(nTargetPid, "dlclose", dlclose, alParams, 1, &sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) dlclose(0x%lx) alParams(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, dlclose, alParams);
         goto exit;
+    }
 
     ptrace_setregs(nTargetPid, &sOrinRegs);
     ptrace_detach(nTargetPid);
