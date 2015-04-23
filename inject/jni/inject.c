@@ -168,13 +168,35 @@ int MZ_FindPidOfProcess(const char * pcProcessName)
     return nTargetPid;
 }
 
-int ptrace_call_wrapper(pid_t target_pid, const char * func_name, void * func_addr, long * parameters, int param_num, struct pt_regs * regs)
+int ptrace_call_wrapper(pid_t nTargetPid, const char * pcFuncName, void * pvFuncAddr, long * plParams, int nParamNum, struct pt_regs * sTempRegs)
 {
-    if (ptrace_call(target_pid, (uint32_t)func_addr, parameters, param_num, regs) == -1)
-        return -1;
+    int nRet = -1;
 
-    if (ptrace_getregs(target_pid, regs) == -1)
+    if (nTargetPid < 0 || NULL == pvFuncAddr || NULL == plParams
+        || 0 > nParamNum || NULL == sTempRegs)
+    {
+        ALOGE("[%s,%d] invalid parameters: nTargetPid(%d) pvFuncAddr(0x%lx) plParams(0x%lx) \
+              nParaNum(%d) sTempRegs(0x%lx)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pvFuncAddr, plParams, nParamNum, sTempRegs);
         return -1;
+    }
+
+    nRet = ptrace_call(nTargetPid, (uint32_t)pvFuncAddr, plParams, nParamNum, sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] ptrace call: nTargetPid(%d) pvFuncAddr(0x%lx) plParams(0x%lx) \
+              nParaNum(%d) sTempRegs(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pvFuncAddr, plParams, nParamNum, sTempRegs);
+        return -1;
+    }
+
+    nRet = ptrace_getregs(nTargetPid, sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] get register from nTargetPid(%d) failed sTempRegs(0x%lx)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, sTempRegs);
+        return -1;
+    }
 
     return 0;
 }
