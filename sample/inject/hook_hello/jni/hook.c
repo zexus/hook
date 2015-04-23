@@ -40,42 +40,44 @@ EGLBoolean s_fnOnNewFunctionAddress(EGLDisplay dpy, EGLSurface surface)
     return s_fnOnEldFunctionAddress(dpy, surface);
 }
 
-void* get_module_base(pid_t pid, const char* module_name)
+void * MZHOOK_GetModuleBase(pid_t nTargetPid, const char * pcModuleName)
 {
-    FILE *fp;
-    long addr = 0;
-    char *pch;
-    char filename[32];
-    char line[1024];
+    long lModuleAddr = 0;
+    char szFileName[32];
+    char szLine[1024];
+    FILE * pcFileDes;
+    char * pcString;
 
-    if (pid < 0)
+    if (nTargetPid < 0)
     {
-        snprintf(filename, sizeof(filename), "/proc/self/maps");
+        snprintf(szFileName, sizeof(szFileName), "/proc/self/maps");
     }
     else
     {
-        snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
+        snprintf(szFileName, sizeof(szFileName), "/proc/%d/maps", nTargetPid);
     }
 
-    fp = fopen(filename, "r");
-
-    if (fp != NULL) {
-        while (fgets(line, sizeof(line), fp)) {
-            if (strstr(line, module_name)) {
-                pch = strtok( line, "-" );
-                addr = strtoul( pch, NULL, 16 );
-
-                if (addr == 0x8000)
-                    addr = 0;
+    pcFileDes = fopen(szFileName, "r");
+    if (NULL != pcFileDes)
+    {
+        while (fgets(szLine, sizeof(szLine), pcFileDes))
+        {
+            if (strstr(szLine, pcModuleName))
+            {
+                pcString = strtok(szLine, "-");
+                lModuleAddr = strtoul(pcString, NULL, 16);
+                if (lModuleAddr == 0x8000)
+                {
+                    lModuleAddr = 0;
+                }
 
                 break;
             }
         }
-
-        fclose(fp) ;
+        fclose(pcFileDes) ;
     }
 
-    return (void *)addr;
+    return (void *)lModuleAddr;
 }
 
 int MZHOOK_MainEntry(char * pcTargetLib)
@@ -89,7 +91,7 @@ int MZHOOK_MainEntry(char * pcTargetLib)
         goto exit;
     }
 
-    void * base_addr = get_module_base(getpid(), pcTargetLib);
+    void * base_addr = MZHOOK_GetModuleBase(getpid(), pcTargetLib);
     ALOGI("[+] Target Library address = %p\n", base_addr);
 
     Elf32_Ehdr ehdr;
