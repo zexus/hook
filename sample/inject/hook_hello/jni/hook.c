@@ -86,13 +86,20 @@ int MZHOOK_MainEntry(char * pcTargetLib)
     int nFd = -1;
 
     nFd = open(pcTargetLib, O_RDONLY);
-    if (-1 == nFd) {
-        ALOGE("[+] Open taget library error\n");
+    if (-1 == nFd)
+    {
+        ALOGE("[%s,%d] open pcTargetLib(0x%x) failed\n", \
+              __FUNCTION__, __LINE__, pcTargetLib);
         goto exit;
     }
 
-    void * base_addr = MZHOOK_GetModuleBase(getpid(), pcTargetLib);
-    ALOGI("[+] Target Library address = %p\n", base_addr);
+    void * pvBaseAddr = MZHOOK_GetModuleBase(getpid(), pcTargetLib);
+    if (NULL == pvBaseAddr)
+    {
+        ALOGE("[%s,%d] get module base pcTargetLib(0x%x) addr failed\n", \
+              __FUNCTION__, __LINE__, pcTargetLib);
+        goto exit;
+    }
 
     Elf32_Ehdr ehdr;
     read(nFd, &ehdr, sizeof(Elf32_Ehdr));
@@ -139,7 +146,7 @@ int MZHOOK_MainEntry(char * pcTargetLib)
         if (shdr.sh_type == SHT_PROGBITS) {
             int name_idx = shdr.sh_name;
             if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0) {
-                out_addr = base_addr + shdr.sh_addr;
+                out_addr = pvBaseAddr + shdr.sh_addr;
                 out_size = shdr.sh_size;
 
                 for (i = 0; i < out_size; i += 4) {
