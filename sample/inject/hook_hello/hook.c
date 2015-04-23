@@ -194,7 +194,7 @@ void * MZHOOK_InjectLibToLocal(char * pcDstLib, char * pcDstFunc)
     pvLocalHandle = dlopen(pcDstLib, RTLD_NOW | RTLD_GLOBAL);
     if (NULL == pvLocalHandle)
     {
-        ALOGE("[%s,%d] dlopen pcSrcLib(0x%x) failed\n", \
+        ALOGE("[%s,%d] dlopen pcSrcLib(%s) failed\n", \
               __FUNCTION__, __LINE__, pcDstLib);
         goto exit;
     }
@@ -202,7 +202,7 @@ void * MZHOOK_InjectLibToLocal(char * pcDstLib, char * pcDstFunc)
     pvLocalAddr = dlsym(pvLocalHandle, pcDstFunc);
     if (NULL == pvLocalAddr)
     {
-        ALOGE("[%s,%d] dlsym pcSrcFunc(0x%x) in local_handle(0x%x) failed\n", \
+        ALOGE("[%s,%d] dlsym pcDstFunc(%s) in pvLocalHandle(0x%lx) failed\n", \
               __FUNCTION__, __LINE__, pcDstFunc, pvLocalHandle);
         goto exit;
     }
