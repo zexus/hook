@@ -495,9 +495,6 @@ int MZHOOK_InjectLibToProcess(int nTargetPid, char * pcSrcLib, char * pcDstLib, 
     return nRet;
 }
 
-//char * pcSrcLib = "/system/lib/libhook_test.so";
-//char * pcSrcFunc = "s_fnOnNewFunctionAddress";
-//char * pcDstFunc = "eglSwapBuffers";
 int MZHOOK_InjectProcess(int nTargetPid, char * pcSrcLib, char * pcSrcFunc, char * pcDstFunc)
 {
     int nRet = -1;
