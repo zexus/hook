@@ -478,10 +478,10 @@ int main(int argc, char** argv)
     int nRet = -1;
     pid_t nTargetPid;
 
-    char * pcSrcLib = "/system/lib/libhook_test.so";
-    char * pcDstLib = "/system/lib/libEGL.so";
-    char * pcFuncLib = "/system/lib/libsurfaceflinger.so";
-    char * pcSrcFunc = "new_eglSwapBuffers";
+    char * pcSrcLib = "/system/lib/libhook_egl.so";
+    char * pcDstLib = "/system/lib/libsurfaceflinger.so";
+    char * pcFuncLib = "/system/lib/libEGL.so";
+    char * pcSrcFunc = "s_fnOnNewFunctionAddress";
     char * pcDstFunc = "eglSwapBuffers";
 
     if (NULL == pcDstLib)

@@ -30,16 +30,6 @@
     #define ASTDERR(...)
 #endif
 
-EGLBoolean (*s_fnOnEldFunctionAddress)(EGLDisplay dpy, EGLSurface surf) = -1;
-
-EGLBoolean s_fnOnNewFunctionAddress(EGLDisplay dpy, EGLSurface surface)
-{
-    ALOGI("New eglSwapBuffers\n");
-    if (s_fnOnEldFunctionAddress == -1)
-        ALOGE("error\n");
-    return s_fnOnEldFunctionAddress(dpy, surface);
-}
-
 void * MZHOOK_GetModuleBase(pid_t nTargetPid, const char * pcModuleName)
 {
     long lModuleAddr = 0;
@@ -80,7 +70,7 @@ void * MZHOOK_GetModuleBase(pid_t nTargetPid, const char * pcModuleName)
     return (void *)lModuleAddr;
 }
 
-int MZHOOK_MainEntry(char * pcTargetLib)
+int MZHOOK_MainEntry(char * pcTargetLib, char * s_fnOnEldFunctionAddress, char * s_fnOnNewFunctionAddress)
 {
     int nRet = -1;
     int nFd = -1;
@@ -225,26 +215,28 @@ int hook_entry(char * pcFuncLib, char * pcSrcLib, char * pcDstLib, char * pcSrcF
 {
     int nRet = -1;
     void * pvSymbolAddr = NULL;
+    void * s_fnOnEldFunctionAddress = NULL;
+    void * s_fnOnNewFunctionAddress = NULL;
 
-    pvSymbolAddr = MZHOOK_InjectLibToLocal(pcDstLib, pcDstFunc);
+    pvSymbolAddr = MZHOOK_InjectLibToLocal(pcFuncLib, pcDstFunc);
     if (NULL == pvSymbolAddr)
     {
-        ALOGE("[%s,%d] inject library pcDstLib(%s) to local pcDstFunc(%s) failed\n", \
-              __FUNCTION__, __LINE__, pcDstLib, pcDstFunc);
+        ALOGE("[%s,%d] inject library pcFuncLib(%s) to local pcDstFunc(%s) failed\n", \
+              __FUNCTION__, __LINE__, pcFuncLib, pcDstFunc);
         goto exit;
     }
     s_fnOnEldFunctionAddress = pvSymbolAddr;
 
-    //pvSymbolAddr = MZHOOK_InjectLibToLocal(pcSrcLib, pcSrcFunc);
-    //if (NULL == pvSymbolAddr)
-    //{
-    //    ALOGE("[%s,%d] inject library pcSrcLib(%s) to local pcSrcFunc(%s) failed\n", \
-    //          __FUNCTION__, __LINE__, pcSrcLib, pcSrcFunc);
-    //    goto exit;
-    //}
-    //s_fnOnNewFunctionAddress = pvSymbolAddr;
+    pvSymbolAddr = MZHOOK_InjectLibToLocal(pcSrcLib, pcSrcFunc);
+    if (NULL == pvSymbolAddr)
+    {
+        ALOGE("[%s,%d] inject library pcSrcLib(%s) to local pcSrcFunc(%s) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, pcSrcFunc);
+        goto exit;
+    }
+    s_fnOnNewFunctionAddress = pvSymbolAddr;
 
-    nRet = MZHOOK_MainEntry(pcFuncLib);
+    nRet = MZHOOK_MainEntry(pcDstLib, s_fnOnEldFunctionAddress, s_fnOnNewFunctionAddress);
     if (0 != nRet)
     {
         ALOGE("[%s,%d] inject library pcDstLib(%s) to local pcDstFunc(%s) failed\n", \
