@@ -452,8 +452,13 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     alParams[0] = pnMapBase;
     alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    if (ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs) == -1)
+    nRet = ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs);
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvDlopenAddr(0x%lx) alParams(0x%lx) failed\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pvDlopenAddr, alParams);
         goto exit;
+    }
 
     void * pvLibHandle = ptrace_retval(&sTempRegs);
     if (NULL == pvLibHandle)
@@ -461,8 +466,6 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
         ALOGE("[+] Call dlopen in remote process error\n");
         goto exit;
     }
-
-    nRet = 0;
 
 exit:
     ptrace_setregs(nTargetPid, &sOrinRegs);
