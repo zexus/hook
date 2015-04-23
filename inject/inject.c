@@ -471,58 +471,65 @@ exit:
     return nRet;
 }
 
-int main(int argc, char** argv)
+//char * pcFuncLib = "/system/lib/libEGL.so";
+//char * pcSrcLib = "/system/lib/libhook_egl.so";
+//char * pcDstLib = "/system/lib/libsurfaceflinger.so";
+//char * pcSrcFunc = "s_fnOnNewFunctionAddress";
+//char * pcDstFunc = "eglSwapBuffers";
+int MZHOOK_InjectLibToProcess(int nTargetPid, char * pcSrcLib, char * pcDstLib, char * pcSrcFunc, char * pcDstFunc, char * pcFuncLib)
 {
     int nRet = -1;
-    pid_t nTargetPid;
 
-    char * pcSrcLib = "/system/lib/libhook_egl.so";
-    char * pcDstLib = "/system/lib/libsurfaceflinger.so";
-    char * pcFuncLib = "/system/lib/libEGL.so";
-    char * pcSrcFunc = "s_fnOnNewFunctionAddress";
-    char * pcDstFunc = "eglSwapBuffers";
-
-    if (NULL == pcDstLib)
+    if (0 < nTargetPid || NULL == pcFuncLib || NULL == pcSrcLib
+        || NULL == pcDstLib || NULL == pcSrcFunc || NULL == pcDstFunc)
     {
-        char* end = NULL;
-        if (argv[1][0] == '-' && argv[1][1] == 'n')
-        {
-            nTargetPid = strtol(argv[2], &end, 10);
-        }
-        else
-        {
-            ALOGE("[%s,%d] invalid parameters\n", \
-                  __FUNCTION__, __LINE__);
-            return -1;
-        }
-
-        nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
-        if (0 != nRet)
-        {
-            ALOGE("[%s,%d] inject source library(%s) to  remote pid(%d) failed\n", \
-                  __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
-            return -1;
-        }
-
-        nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc, pcDstFunc);
-        if (0 != nRet)
-        {
-            ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
-                  __FUNCTION__, __LINE__, pcSrcLib, getpid());
-            return -1;
-        }
-    }
-    else
-    {
-        nTargetPid = MZHOOK_FindPidOfProcess("/system/bin/surfaceflinger");
-        nRet = MZHOOK_InjectProToRemote(nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
-        if (0 != nRet)
-        {
-            ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
-                  __FUNCTION__, __LINE__, pcSrcLib, getpid());
-            return -1;
-        }
+        ALOGE("[%s,%d] invalid parameters nTargetPid(%d) pcFuncLib(%s) pcSrcLib(%s) \
+              pcDstLib(%s) pcSrcFunc(0x%lx) pcDstFunc(0x%lx)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
+        return nRet;
     }
 
-    return 0;
+    nRet = MZHOOK_InjectProToRemote(nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
+    if (0 != nRet)
+    {
+        ALOGE("[%s,%d] inject source pcSrcLib(%s) to  local nTargetPid(%d) failed \
+              pcFuncLib(%s) pcDstLib(%s) pcSrcFunc(0x%lx) pcDstFunc(0x%lx)\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
+        return nRet;
+    }
+
+    return nRet;
+}
+
+//char * pcSrcLib = "/system/lib/libhook_test.so";
+//char * pcSrcFunc = "s_fnOnNewFunctionAddress";
+//char * pcDstFunc = "eglSwapBuffers";
+int MZHOOK_InjectProcess(int nTargetPid, char * pcSrcLib, char * pcSrcFunc, char * pcDstFunc)
+{
+    int nRet = -1;
+
+    if (0 > nTargetPid || NULL == pcSrcLib || NULL == pcSrcFunc || NULL == pcDstFunc)
+    {
+        ALOGE("[%s,%d] invalid parameters nTargetPid(%d) pcSrcLib(%s) pcSrcFunc(0x%x) pcDstFunc(0x%x)\n", \
+              __FUNCTION__, __LINE__, nTargetPid, pcSrcLib, pcSrcFunc, pcDstFunc);
+        return nRet;
+    }
+
+    nRet = MZHOOK_InjectLibToRemote(nTargetPid, pcSrcLib);
+    if (0 != nRet)
+    {
+        ALOGE("[%s,%d] inject source pcSrcLib(%s) to  remote nTargetPid(%d) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, nTargetPid);
+        return -1;
+    }
+
+    nRet = MZHOOK_InjectLibToLocal(nTargetPid, pcSrcLib, pcSrcFunc, pcDstFunc);
+    if (0 != nRet)
+    {
+        ALOGE("[%s,%d] inject source library(%s) to  local pid(%d) failed\n", \
+              __FUNCTION__, __LINE__, pcSrcLib, getpid());
+        return -1;
+    }
+
+    return nRet;
 }

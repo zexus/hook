@@ -7,12 +7,12 @@ LOCAL_SRC_FILES := \
 	elf_utils.c \
 	ptrace_utils.c
 
-LOCAL_CFLAGS += -pie -fPIE
+#LOCAL_CFLAGS += -pie -fPIE
 
-LOCAL_LDFLAGS += -pie -fPIE
+#LOCAL_LDFLAGS += -pie -fPIE
 
 LOCAL_LDLIBS += -L$(SYSROOT)/usr/lib -llog -ldl
 
-LOCAL_MODULE := inject
+LOCAL_MODULE := libinject
 
-include $(BUILD_EXECUTABLE)
+include $(BUILD_SHARED_LIBRARY)
