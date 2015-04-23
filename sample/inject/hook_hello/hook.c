@@ -74,11 +74,15 @@ int MZHOOK_MainEntry(char * pcTargetLib, char * s_fnOnEldFunctionAddress, char *
 {
     int nRet = -1;
     int nFd = -1;
+    int nShnum = -1;
+    int nShentSize = -1;
+    unsigned long ulShdrAddr;
+    unsigned long ulStrIdx;
 
     nFd = open(pcTargetLib, O_RDONLY);
     if (-1 == nFd)
     {
-        ALOGE("[%s,%d] open pcTargetLib(0x%x) failed\n", \
+        ALOGE("[%s,%d] open pcTargetLib(0x%lx) failed\n", \
               __FUNCTION__, __LINE__, pcTargetLib);
         goto exit;
     }
@@ -86,18 +90,25 @@ int MZHOOK_MainEntry(char * pcTargetLib, char * s_fnOnEldFunctionAddress, char *
     void * pvBaseAddr = MZHOOK_GetModuleBase(getpid(), pcTargetLib);
     if (NULL == pvBaseAddr)
     {
-        ALOGE("[%s,%d] get module base pcTargetLib(0x%x) addr failed\n", \
+        ALOGE("[%s,%d] get module base pcTargetLib(0x%lx) addr failed\n", \
               __FUNCTION__, __LINE__, pcTargetLib);
         goto exit;
     }
 
-    Elf32_Ehdr ehdr;
-    read(nFd, &ehdr, sizeof(Elf32_Ehdr));
+    Elf32_Ehdr sEhdr;
 
-    unsigned long shdr_addr = ehdr.e_shoff;
-    int nShnum = ehdr.e_shnum;
-    int nShentSize = ehdr.e_shentsize;
-    unsigned long stridx = ehdr.e_shstrndx;
+    nRet = read(nFd, &sEhdr, sizeof(Elf32_Ehdr));
+    if (-1 == nRet)
+    {
+        ALOGE("[%s,%d] read section head sEhdr(0x%lx) data failed\n", \
+              __FUNCTION__, __LINE__, sEhdr);
+        goto exit;
+    }
+
+    ulShdrAddr = sEhdr.e_shoff;
+    nShnum = sEhdr.e_shnum;
+    nShentSize = sEhdr.e_shentsize;
+    ulStrIdx = sEhdr.e_shstrndx;
 
     /*
      *节区头部数据结构描述
@@ -115,21 +126,20 @@ int MZHOOK_MainEntry(char * pcTargetLib, char * s_fnOnEldFunctionAddress, char *
      *   Elf32_Word sh_entsize;             // 某些节区中包含固定大小的项目，如符号表
      *}Elf32_Shdr
     */
-
     Elf32_Shdr shdr;
-    lseek(nFd, shdr_addr + stridx * nShentSize, SEEK_SET);
+    lseek(nFd, ulShdrAddr + ulStrIdx * nShentSize, SEEK_SET);
     read(nFd, &shdr, nShentSize);
 
     char * string_table = (char *)malloc(shdr.sh_size);
     lseek(nFd, shdr.sh_offset, SEEK_SET);
     read(nFd, string_table, shdr.sh_size);
-    lseek(nFd, shdr_addr, SEEK_SET);
+    lseek(nFd, ulShdrAddr, SEEK_SET);
 
     int i;
-    uint32_t out_addr = 0;
-    uint32_t out_size = 0;
-    uint32_t got_item = 0;
-    int32_t got_found = 0;
+    uint32_t nOutAddr = 0;
+    uint32_t nOutSize = 0;
+    uint32_t nGotItem = 0;
+    int32_t nGotFound = 0;
 
     for (i = 0; i < nShnum; i++)
     {
@@ -139,31 +149,29 @@ int MZHOOK_MainEntry(char * pcTargetLib, char * s_fnOnEldFunctionAddress, char *
             int name_idx = shdr.sh_name;
             if (strcmp(&(string_table[name_idx]), ".got.plt") == 0 || strcmp(&(string_table[name_idx]), ".got") == 0)
             {
-                out_addr = pvBaseAddr + shdr.sh_addr;
-                out_size = shdr.sh_size;
+                nOutAddr = pvBaseAddr + shdr.sh_addr;
+                nOutSize = shdr.sh_size;
 
-                for (i = 0; i < out_size; i += 4)
+                for (i = 0; i < nOutSize; i += 4)
                 {
-                    got_item = *(uint32_t *)(out_addr + i);
-                    if (got_item  == s_fnOnEldFunctionAddress)
+                    nGotItem = *(uint32_t *)(nOutAddr + i);
+                    if (nGotItem  == s_fnOnEldFunctionAddress)
                     {
-                        ALOGI("[+] Found s_fnOnEldFunctionAddress in got section\n");
-                        got_found = 1;
-
+                        ALOGI("[%s,%d] found 0x%lx int got section\n", __FUNCTION__, __LINE__, s_fnOnEldFunctionAddress);
+                        nGotFound = 1;
                         uint32_t page_size = getpagesize();
-                        uint32_t entry_page_start = (out_addr + i) & (~(page_size - 1));
+                        uint32_t entry_page_start = (nOutAddr + i) & (~(page_size - 1));
                         mprotect((uint32_t *)entry_page_start, page_size, PROT_READ | PROT_WRITE);
-                        *(uint32_t *)(out_addr + i) = s_fnOnNewFunctionAddress;
-
+                        *(uint32_t *)(nOutAddr + i) = s_fnOnNewFunctionAddress;
                         break;
                     }
-                    else if (got_item == s_fnOnNewFunctionAddress)
+                    else if (nGotItem == s_fnOnNewFunctionAddress)
                     {
                         ALOGI("Already hooked\n");
                         break;
                     }
                 }
-                if (got_found)
+                if (nGotFound)
                     break;
             }
         }

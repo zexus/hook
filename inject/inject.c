@@ -337,11 +337,9 @@ static int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, co
         goto exit;
     }
 
+exit:
     ptrace_setregs(nTargetPid, &sOrinRegs);
     ptrace_detach(nTargetPid);
-    nRet = 0;
-
-exit:
     return nRet;
 }
 
