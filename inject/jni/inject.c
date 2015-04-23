@@ -118,7 +118,7 @@ static void * MZHOOK_GetRemoteAddr(pid_t nTargetPid, const char * pcModuleName, 
     return pvTargetAddr;
 }
 
-int MZ_FindPidOfProcess(const char * pcProcessName)
+int MZHOOK_FindPidOfProcess(const char * pcProcessName)
 {
     int nId;
     pid_t nTargetPid = -1;
@@ -168,7 +168,7 @@ int MZ_FindPidOfProcess(const char * pcProcessName)
     return nTargetPid;
 }
 
-int ptrace_call_wrapper(pid_t nTargetPid, const char * pcFuncName, void * pvFuncAddr, long * plParams, int nParamNum, struct pt_regs * sTempRegs)
+static int MZHOOK_PtrCallWrapper(pid_t nTargetPid, const char * pcFuncName, void * pvFuncAddr, long * plParams, int nParamNum, struct pt_regs * sTempRegs)
 {
     int nRet = -1;
 
@@ -201,7 +201,7 @@ int ptrace_call_wrapper(pid_t nTargetPid, const char * pcFuncName, void * pvFunc
     return 0;
 }
 
-int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const char * pcSrcLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
+static int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const char * pcSrcLib, const char * pcDstLib, const char * pcSrcFunc, const char * pcDstFunc)
 {
     int nRet = -1;
     long alParams[10];
@@ -250,7 +250,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[5] = 0;
     pvMmapAddr = MZHOOK_GetRemoteAddr(nTargetPid, pcLibcPath, (void *)mmap);
 
-    if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
+    if (MZHOOK_PtrCallWrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
         goto exit;
 
     pnMapBase = ptrace_retval(&sTempRegs);
@@ -265,7 +265,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[0] = pnMapBase;
     alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    nRet = ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs);
+    nRet = MZHOOK_PtrCallWrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs);
     if (-1 == nRet)
     {
         ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvDlopenAddr(0x%lx) alParams(0x%lx) failed\n", \
@@ -280,7 +280,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     alParams[0] = pvLibHandle;
     alParams[1] = pnMapBase + FUNCTION_NAME_ADDR_OFFSET;
 
-    nRet = ptrace_call_wrapper(nTargetPid, "dlsym", pvDlsymAddr, alParams, 2, &sTempRegs);
+    nRet = MZHOOK_PtrCallWrapper(nTargetPid, "dlsym", pvDlsymAddr, alParams, 2, &sTempRegs);
     if (-1 == nRet)
     {
         ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvDlsymAddr(0x%lx) alParams(0x%lx) failed\n", \
@@ -319,7 +319,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
     ptrace_writedata(nTargetPid, pnMapBase + FUNCTION_DST_FUNC_OFFSET, pcDstFunc, strlen(pcDstFunc) + 1);
     alParams[4] = pnMapBase + FUNCTION_DST_FUNC_OFFSET;
 
-    nRet = ptrace_call_wrapper(nTargetPid, "hook_entry", pvHookEntryAddr, alParams, 5, &sTempRegs);
+    nRet = MZHOOK_PtrCallWrapper(nTargetPid, "hook_entry", pvHookEntryAddr, alParams, 5, &sTempRegs);
     if (-1 == nRet)
     {
         ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvHookEntryAddr(0x%lx) alParams(0x%lx) failed\n", \
@@ -329,7 +329,7 @@ int MZHOOK_InjectProToRemote(pid_t nTargetPid, const char * pcFuncLib, const cha
 
     alParams[0] = pvLibHandle;
 
-    nRet = ptrace_call_wrapper(nTargetPid, "dlclose", dlclose, alParams, 1, &sTempRegs);
+    nRet = MZHOOK_PtrCallWrapper(nTargetPid, "dlclose", dlclose, alParams, 1, &sTempRegs);
     if (-1 == nRet)
     {
         ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) dlclose(0x%lx) alParams(0x%lx) failed\n", \
@@ -345,7 +345,7 @@ exit:
     return nRet;
 }
 
-int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char * pcSrcFunc, const char * pcDstFunc)
+static int MZHOOK_InjectLibToLocal(pid_t nTargetPid, const char * pcSrcLib, const char * pcSrcFunc, const char * pcDstFunc)
 {
     int nRet = -1;
     unsigned char acBuf[4];
@@ -398,7 +398,7 @@ exit:
     return nRet;
 }
 
-int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
+static int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
 {
     int nRet = -1;
     long alParams[6];
@@ -440,7 +440,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     alParams[4] = 0;
     alParams[5] = 0;
 
-    if (ptrace_call_wrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
+    if (MZHOOK_PtrCallWrapper(nTargetPid, "mmap", pvMmapAddr, alParams, 6, &sTempRegs) == -1)
         goto exit;
 
     pnMapBase = ptrace_retval(&sTempRegs);
@@ -452,7 +452,7 @@ int MZHOOK_InjectLibToRemote(pid_t nTargetPid, const char * pcSrcLib)
     alParams[0] = pnMapBase;
     alParams[1] = RTLD_NOW | RTLD_GLOBAL;
 
-    nRet = ptrace_call_wrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs);
+    nRet = MZHOOK_PtrCallWrapper(nTargetPid, "dlopen", pvDlopenAddr, alParams, 2, &sTempRegs);
     if (-1 == nRet)
     {
         ALOGE("[%s,%d] ptrace call wrapper nTargetPid(%d) pvDlopenAddr(0x%lx) alParams(0x%lx) failed\n", \
@@ -516,7 +516,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        nTargetPid = MZ_FindPidOfProcess("/system/bin/surfaceflinger");
+        nTargetPid = MZHOOK_FindPidOfProcess("/system/bin/surfaceflinger");
         nRet = MZHOOK_InjectProToRemote(nTargetPid, pcFuncLib, pcSrcLib, pcDstLib, pcSrcFunc, pcDstFunc);
         if (0 != nRet)
         {
