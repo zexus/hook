@@ -143,7 +143,7 @@ int MZ_FindPidOfProcess(const char * pcProcessName)
         return -1;
     }
 
-    while(NULL == (sDirectoryEntry = readdir(pcDirectory)))
+    while(NULL != (sDirectoryEntry = readdir(pcDirectory)))
     {
         nId = atoi(sDirectoryEntry->d_name);
         if (0 != nId)
